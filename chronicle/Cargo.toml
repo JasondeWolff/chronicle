@@ -1,0 +1,59 @@
+###############################################################################
+#                                   GENERAL
+###############################################################################
+
+[package]
+name = "chronicle"
+authors = ["Jason de Wolff"]
+version = "0.0.1"
+edition = "2021"
+homepage = "https://github.com/JasondeWolff/chronicle"
+repository = "https://github.com/JasondeWolff/chronicle"
+categories = ["graphics", "vulkan", "pathtracing"]
+license = "MIT"
+
+[dependencies]
+winit     = "0.20.0"
+ash       = "0.29.0"
+num       = "0.2"
+cgmath    = "0.17.0"
+image     = "0.22"
+memoffset = "0.5.1"
+tobj      = "0.1.10"
+
+[dependencies.bitflags]
+version = ">= 1.0.4"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3.5", features = ["windef", "libloaderapi"] }
+
+###############################################################################
+#                               BUILD SETTINGS
+###############################################################################
+
+[lib]
+name = "chronicle"
+crate-type = ["lib"]
+path = "src/lib.rs"
+
+[profile.dev]                           # Modify profile settings via config.
+opt-level = 0                           # Optimization level.
+debug = true                            # Include debug info.
+debug-assertions = true                 # Enables debug assertions.
+overflow-checks = true                  # Enables runtime integer overflow checks.
+lto = false                             # Sets link-time optimization.
+panic = 'unwind'                        # The panic strategy.
+incremental = true                      # Incremental compilation.
+codegen-units = 16                      # Number of code generation units.
+rpath = false                           # Sets the rpath linking option.
+
+[profile.release]                       # Modify profile settings via config.
+opt-level = 3                           # Optimization level.
+debug = false                           # Include debug info.
+debug-assertions = false                # Enables debug assertions.
+overflow-checks = false                 # Enables runtime integer overflow checks.
+lto = true                              # Sets link-time optimization.
+panic = 'abort'                         # The panic strategy.
+incremental = true                      # Incremental compilation.
+codegen-units = 1                       # Number of code generation units.
+rpath = false                           # Sets the rpath linking option.

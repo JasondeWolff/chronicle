@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/game/target/debug/game.exe",
+            "args": [
+            ],
+            "cwd": "${workspaceFolder}/game",
+            "preLaunchTask": "cargo build"
+        },
+        {
+            "name": "Release",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/game/target/release/game.exe",
+            "args": [
+            ],
+            "cwd": "${workspaceFolder}/game",
+            "preLaunchTask": "cargo build release"
+        }
+    ]
+}

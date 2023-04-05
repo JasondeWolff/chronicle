@@ -1,0 +1,86 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo build",
+            "dependsOn": [
+                "cargo build chronicle",
+                "cargo build game"
+            ]
+        },
+        {
+            "label": "cargo build release",
+            "dependsOn": [
+                "cargo build chronicle release",
+                "cargo build game release"
+            ]
+        },
+
+        {
+            "label": "cargo build chronicle",
+            "type": "cargo",
+            "command": "build",
+            "args": [
+                "--lib"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chronicle/"
+            },
+        },
+        {
+            "label": "cargo build chronicle release",
+            "type": "cargo",
+            "command": "build",
+            "args": [
+                "--release",
+                "--lib"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/chronicle/"
+            },
+        },
+
+        {
+            "label": "cargo build game",
+            "type": "cargo",
+            "command": "build",
+            "args": [
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/game/"
+            },
+        },
+        {
+            "label": "cargo build game release",
+            "type": "cargo",
+            "command": "build",
+            "args": [
+                "--release",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/game/"
+            },
+        },
+
+        {
+            "label": "cargo run game",
+            "type": "cargo",
+            "command": "run",
+            "options": {
+                "cwd": "${workspaceFolder}/game/"
+            },
+        },
+    ]
+}
