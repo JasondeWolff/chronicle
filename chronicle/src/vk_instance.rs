@@ -31,8 +31,8 @@ impl VkInstance {
         let entry = ash::Entry::new().unwrap();
         let instance = Self::create_instance(&entry, title);
         let (debug_utils_loader, debug_messenger) = utility::debug::setup_debug_utils(true, &entry, &instance);
-        let surface_loader = ash::extensions::khr::Surface::new(&entry, &instance);
         let surface = unsafe { utility::platforms::create_surface(&entry, &instance, &window.get_winit_window()).expect("Failed to create a surface.") };
+        let surface_loader = ash::extensions::khr::Surface::new(&entry, &instance);
 
         let physical_device = VkPhysicalDevice::new(&instance, &surface_loader, surface);
         let logical_device = VkLogicalDevice::new(&instance, &physical_device, &surface_loader, surface);
@@ -66,6 +66,10 @@ impl VkInstance {
     }
 
     fn create_instance(entry: &ash::Entry, title: &'static str) -> ash::Instance {
+        if !(VALIDATION.is_enable && utility::debug::check_validation_layer_support(entry, &VALIDATION.required_validation_layers.to_vec())) {
+            panic!("Failed to enable validation layers.");
+        }
+
         let app_name = CString::new(title).unwrap();
         let engine_name = CString::new(ENGINE_TITLE).unwrap();
         let app_info = vk::ApplicationInfo {

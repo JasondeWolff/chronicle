@@ -29,7 +29,7 @@ impl VkSwapchain {
 
         let surface_format = Self::choose_swapchain_format(&swapchain_support.formats);
         let present_mode = Self::choose_swapchain_present_mode(&swapchain_support.present_modes);
-        let extent = Self::choose_swapchain_extent(&swapchain_support.capabilities, width, height);
+        let extent = Self::choose_swapchain_extent(&swapchain_support.capabilities, 1280, 720);
 
         let image_count = swapchain_support.capabilities.min_image_count + 1;
         let image_count = if swapchain_support.capabilities.max_image_count > 0 {
@@ -87,11 +87,11 @@ impl VkSwapchain {
         };
 
         VkSwapchain {
-            swapchain_loader,
-            swapchain,
+            swapchain_loader: swapchain_loader,
+            swapchain: swapchain,
             swapchain_format: surface_format.format,
             swapchain_extent: extent,
-            swapchain_images,
+            swapchain_images: swapchain_images,
         }
     }
 

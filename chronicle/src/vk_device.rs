@@ -55,11 +55,6 @@ impl VkPhysicalDevice {
                 .expect("Failed to enumerate Physical Devices.")
         };
 
-        println!(
-            "{} devices found with vulkan support.",
-            physical_devices.len()
-        );
-
         let mut result = None;
         for &physical_device in physical_devices.iter() {
             if Self::is_physical_device_suitable(instance, physical_device, surface_loader, surface) {
@@ -82,6 +77,10 @@ impl VkPhysicalDevice {
         surface: vk::SurfaceKHR
     ) -> bool {
         let _device_features = unsafe { instance.get_physical_device_features(physical_device) };
+        let device_properties = unsafe { instance.get_physical_device_properties(physical_device) };
+        if device_properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU {
+            return false;
+        }
 
         let indices = Self::find_queue_family(instance, physical_device, surface_loader, surface);
 
@@ -187,19 +186,31 @@ impl VkLogicalDevice {
     ) -> Self {
         let indices = VkPhysicalDevice::find_queue_family(instance, physical_device.device, surface_loader, surface);
 
+        let mut unique_queue_families = std::collections::HashSet::new();
+        unique_queue_families.insert(indices.graphics_family.unwrap());
+        unique_queue_families.insert(indices.present_family.unwrap());
+
         let queue_priorities = [1.0_f32];
-        let queue_create_info = vk::DeviceQueueCreateInfo {
-            s_type: vk::StructureType::DEVICE_QUEUE_CREATE_INFO,
-            p_next: ptr::null(),
-            flags: vk::DeviceQueueCreateFlags::empty(),
-            queue_family_index: indices.graphics_family.unwrap(),
-            p_queue_priorities: queue_priorities.as_ptr(),
-            queue_count: queue_priorities.len() as u32,
-        };
+        let mut queue_create_infos = vec![];
+        for &queue_family in unique_queue_families.iter() {
+            let queue_create_info = vk::DeviceQueueCreateInfo {
+                s_type: vk::StructureType::DEVICE_QUEUE_CREATE_INFO,
+                p_next: ptr::null(),
+                flags: vk::DeviceQueueCreateFlags::empty(),
+                queue_family_index: indices.graphics_family.unwrap(),
+                p_queue_priorities: queue_priorities.as_ptr(),
+                queue_count: queue_priorities.len() as u32,
+            };
+            queue_create_infos.push(queue_create_info);
+        }
 
         let physical_device_features = vk::PhysicalDeviceFeatures {
             ..Default::default()
         };
+
+        let enable_extension_names: [*const c_char; 1] = [
+            ash::extensions::khr::Swapchain::name().as_ptr(),
+        ];
 
         let requred_validation_layer_raw_names: Vec<CString> = VALIDATION
             .required_validation_layers
@@ -215,8 +226,8 @@ impl VkLogicalDevice {
             s_type: vk::StructureType::DEVICE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::DeviceCreateFlags::empty(),
-            queue_create_info_count: 1,
-            p_queue_create_infos: &queue_create_info,
+            queue_create_info_count: queue_create_infos.len() as u32,
+            p_queue_create_infos: queue_create_infos.as_ptr(),
             enabled_layer_count: if VALIDATION.is_enable {
                 enable_layer_names.len()
             } else {
@@ -227,8 +238,8 @@ impl VkLogicalDevice {
             } else {
                 ptr::null()
             },
-            enabled_extension_count: 0,
-            pp_enabled_extension_names: ptr::null(),
+            enabled_extension_count: enable_extension_names.len() as u32,
+            pp_enabled_extension_names: enable_extension_names.as_ptr(),
             p_enabled_features: &physical_device_features,
         };
 

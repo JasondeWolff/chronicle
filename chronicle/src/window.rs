@@ -1,5 +1,5 @@
 use winit::event::{Event, VirtualKeyCode, ElementState, KeyboardInput, WindowEvent};
-use winit::event_loop::{EventLoop, ControlFlow};
+use winit::event_loop::ControlFlow;
 
 pub struct Window {
     event_loop: winit::event_loop::EventLoop<()>,
