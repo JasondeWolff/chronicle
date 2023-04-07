@@ -7,23 +7,15 @@ use std::ffi::CString;
 use std::ptr;
 use std::os::raw::c_void;
 
-use crate::vk_device::{VkPhysicalDevice, VkLogicalDevice};
-use crate::vk_swapchain::VkSwapchain;
 use crate::window::Window;
 
 pub struct VkInstance {
-    _entry: ash::Entry,
+    entry: ash::Entry,
     instance: ash::Instance,
     debug_utils_loader: ash::extensions::ext::DebugUtils,
     debug_messenger: vk::DebugUtilsMessengerEXT,
     surface_loader: ash::extensions::khr::Surface,
     surface: vk::SurfaceKHR,
-
-    physical_device: VkPhysicalDevice,
-    device: VkLogicalDevice,
-    graphics_queue: vk::Queue,
-    present_queue: vk::Queue,
-    swapchain: VkSwapchain
 }
 
 impl VkInstance {
@@ -34,34 +26,13 @@ impl VkInstance {
         let surface = unsafe { utility::platforms::create_surface(&entry, &instance, &window.get_winit_window()).expect("Failed to create a surface.") };
         let surface_loader = ash::extensions::khr::Surface::new(&entry, &instance);
 
-        let physical_device = VkPhysicalDevice::new(&instance, &surface_loader, surface);
-        let logical_device = VkLogicalDevice::new(&instance, &physical_device, &surface_loader, surface);
-        let graphics_queue = logical_device.get_graphics_queue();
-        let present_queue = logical_device.get_present_queue();
-
-        let swapchain = VkSwapchain::new(
-            &instance,
-            &logical_device.get_device(), physical_device.get_device(),
-            &surface_loader, surface,
-            logical_device.get_queue_family_indices(),
-            window.width(),
-            window.height()
-        );
-
         VkInstance {
-            _entry: entry,
-            instance: instance,
-            debug_utils_loader: debug_utils_loader,
-            debug_messenger: debug_messenger,
-            surface_loader: surface_loader,
-            surface: surface,
-
-            physical_device: physical_device,
-            device: logical_device,
-            graphics_queue: graphics_queue,
-            present_queue: present_queue,
-
-            swapchain: swapchain
+            entry,
+            instance,
+            debug_utils_loader,
+            debug_messenger,
+            surface_loader,
+            surface
         }
     }
 
@@ -131,6 +102,22 @@ impl VkInstance {
         };
 
         instance
+    }
+
+    pub fn get_entry(&self) -> &ash::Entry {
+        &self.entry
+    }
+
+    pub fn get_instance(&self) -> &ash::Instance {
+        &self.instance
+    }
+
+    pub fn get_surface_loader(&self) -> &ash::extensions::khr::Surface {
+        &self.surface_loader
+    }
+
+    pub fn get_surface(&self) -> &vk::SurfaceKHR {
+        &self.surface
     }
 }
 

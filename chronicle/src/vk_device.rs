@@ -3,11 +3,13 @@ use ash::{vk, version::InstanceV1_0};
 
 use crate::utility;
 use crate::utility::constants::VALIDATION;
+use crate::vk_instance::VkInstance;
 use crate::vk_swapchain::VkSwapchain;
 
 use std::ffi::CString;
 use std::os::raw::c_char;
 use std::ptr;
+use std::rc::Rc;
 
 const DEVICE_EXTENSIONS: [&'static str; 1] = [
     "VK_KHR_swapchain"
@@ -34,13 +36,9 @@ pub struct VkLogicalDevice {
 }
 
 impl VkPhysicalDevice {
-    pub fn new(
-        instance: &ash::Instance,
-        surface_loader: &ash::extensions::khr::Surface,
-        surface: vk::SurfaceKHR
-    ) -> Self {
+    pub fn new(instance: &VkInstance) -> Self {
         VkPhysicalDevice {
-            device: Self::pick_physical_device(instance, surface_loader, surface)
+            device: Self::pick_physical_device(instance.get_instance(), instance.get_surface_loader(), *instance.get_surface())
         }
     }
 
@@ -179,12 +177,10 @@ impl VkPhysicalDevice {
 
 impl VkLogicalDevice {
     pub fn new(
-        instance: &ash::Instance,
+        instance: &VkInstance,
         physical_device: &VkPhysicalDevice,
-        surface_loader: &ash::extensions::khr::Surface,
-        surface: vk::SurfaceKHR
-    ) -> Self {
-        let indices = VkPhysicalDevice::find_queue_family(instance, physical_device.device, surface_loader, surface);
+    ) -> Rc<Self> {
+        let indices = VkPhysicalDevice::find_queue_family(instance.get_instance(), physical_device.device, instance.get_surface_loader(), *instance.get_surface());
 
         let mut unique_queue_families = std::collections::HashSet::new();
         unique_queue_families.insert(indices.graphics_family.unwrap());
@@ -244,15 +240,15 @@ impl VkLogicalDevice {
         };
 
         let device: ash::Device = unsafe {
-            instance
+            instance.get_instance()
                 .create_device(physical_device.device, &device_create_info, None)
                 .expect("Failed to create logical Device!")
         };
 
-        VkLogicalDevice {
+        Rc::new(VkLogicalDevice {
             device: device,
             queue_indices: indices
-        }
+        })
     }
 
     pub fn get_graphics_queue(&self) -> vk::Queue {
