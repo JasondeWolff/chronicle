@@ -1,4 +1,4 @@
-use crate::utility::debug::ValidationInfo;
+use crate::graphics::utility::debug::ValidationInfo;
 use ash::vk_make_version;
 
 pub const APPLICATION_VERSION: u32 = vk_make_version!(1, 0, 0);

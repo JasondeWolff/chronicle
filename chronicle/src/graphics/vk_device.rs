@@ -1,10 +1,8 @@
 use ash::version::DeviceV1_0;
 use ash::{vk, version::InstanceV1_0};
 
-use crate::utility;
-use crate::utility::constants::VALIDATION;
-use crate::vk_instance::VkInstance;
-use crate::vk_swapchain::VkSwapchain;
+use crate::graphics::*;
+use utility::constants::VALIDATION;
 
 use std::ffi::CString;
 use std::os::raw::c_char;

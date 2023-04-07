@@ -3,14 +3,14 @@ use ash::version::DeviceV1_0;
 
 use std::rc::Rc;
 
-use crate::{vk_device::{QueueFamilyIndices, VkLogicalDevice, VkPhysicalDevice}, vk_instance::VkInstance};
+use crate::graphics::*;
 
 pub struct VkSwapchain {
     device: Rc<VkLogicalDevice>,
 
     swapchain_loader: ash::extensions::khr::Swapchain,
     swapchain: vk::SwapchainKHR,
-    swapchain_images: Vec<vk::Image>,
+    _swapchain_images: Vec<vk::Image>,
     swapchain_format: vk::Format,
     swapchain_extent: vk::Extent2D,
     swapchain_imageviews: Vec<vk::ImageView>,
@@ -33,7 +33,7 @@ impl VkSwapchain {
 
         let surface_format = Self::choose_swapchain_format(&swapchain_support.formats);
         let present_mode = Self::choose_swapchain_present_mode(&swapchain_support.present_modes);
-        let extent = Self::choose_swapchain_extent(&swapchain_support.capabilities, 1280, 720);
+        let extent = Self::choose_swapchain_extent(&swapchain_support.capabilities, width, height);
 
         let image_count = swapchain_support.capabilities.min_image_count + 1;
         let image_count = if swapchain_support.capabilities.max_image_count > 0 {
@@ -103,7 +103,7 @@ impl VkSwapchain {
             swapchain: swapchain,
             swapchain_format: surface_format.format,
             swapchain_extent: extent,
-            swapchain_images: swapchain_images,
+            _swapchain_images: swapchain_images,
             swapchain_imageviews: swapchain_imageviews
         }
     }

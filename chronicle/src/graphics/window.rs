@@ -12,7 +12,7 @@ impl Window {
         
         let window = winit::window::WindowBuilder::new()
             .with_title(title)
-            .with_inner_size(winit::dpi::LogicalSize::new(width, height))
+            .with_inner_size(winit::dpi::PhysicalSize::new(width, height))
             .build(&event_loop)
             .expect("Failed to create window.");
 

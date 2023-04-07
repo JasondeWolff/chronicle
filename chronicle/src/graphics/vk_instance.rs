@@ -1,13 +1,12 @@
 use ash::version::EntryV1_0;
 use ash::{vk, version::InstanceV1_0};
-use crate::utility::constants::{ENGINE_TITLE, ENGINE_VERSION, APPLICATION_VERSION, API_VERSION, VALIDATION};
-use crate::utility;
+
+use crate::graphics::*;
+use utility::constants::{ENGINE_TITLE, ENGINE_VERSION, APPLICATION_VERSION, API_VERSION, VALIDATION};
 
 use std::ffi::CString;
 use std::ptr;
 use std::os::raw::c_void;
-
-use crate::window::Window;
 
 pub struct VkInstance {
     entry: ash::Entry,

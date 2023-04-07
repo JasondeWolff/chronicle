@@ -2,39 +2,28 @@ use ash::vk;
 
 use std::rc::Rc;
 
-pub mod utility;
-
-mod window;
-use window::Window;
-
-mod vk_instance;
-use vk_instance::VkInstance;
-mod vk_device;
-mod vk_swapchain;
-
-use crate::vk_device::{VkPhysicalDevice, VkLogicalDevice};
-use crate::vk_swapchain::VkSwapchain;
+pub mod graphics;
 
 pub struct App {
-    window: Window,
-    vk_instance: VkInstance,
-    physical_device: VkPhysicalDevice,
-    device: Rc<VkLogicalDevice>,
+    window: graphics::Window,
+    vk_instance: graphics::VkInstance,
+    physical_device: graphics::VkPhysicalDevice,
+    device: Rc<graphics::VkLogicalDevice>,
     graphics_queue: vk::Queue,
     present_queue: vk::Queue,
-    swapchain: VkSwapchain
+    swapchain: graphics::VkSwapchain
 }
 
 impl App {
     pub fn new(title: &'static str, width: u32, height: u32) -> Self {
-        let window = Window::new(title, width, height);
-        let vk_instance = VkInstance::new(title, &window);
+        let window = graphics::Window::new(title, width, height);
+        let vk_instance = graphics::VkInstance::new(title, &window);
 
-        let physical_device = VkPhysicalDevice::new(&vk_instance);
-        let device = VkLogicalDevice::new(&vk_instance, &physical_device);
+        let physical_device = graphics::VkPhysicalDevice::new(&vk_instance);
+        let device = graphics::VkLogicalDevice::new(&vk_instance, &physical_device);
         let graphics_queue = device.get_graphics_queue();
         let present_queue = device.get_present_queue();
-        let swapchain = VkSwapchain::new(
+        let swapchain = graphics::VkSwapchain::new(
             &vk_instance,
             device.clone(), &physical_device,
             window.width(),
