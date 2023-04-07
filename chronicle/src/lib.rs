@@ -3,6 +3,9 @@ use ash::vk;
 use std::rc::Rc;
 
 pub mod graphics;
+pub mod resources;
+pub mod common;
+pub mod system;
 
 pub struct App {
     window: graphics::Window,

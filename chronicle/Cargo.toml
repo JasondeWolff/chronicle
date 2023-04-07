@@ -17,9 +17,10 @@ winit     = "0.20.0"
 ash       = "0.29.0"
 num       = "0.2"
 cgmath    = "0.17.0"
-image     = "0.22"
 memoffset = "0.5.1"
-tobj      = "0.1.10"
+bitmask-enum = "2.1.0"
+stb_image = "0.2.4"
+gltf = "1.0.0"
 
 [dependencies.bitflags]
 version = ">= 1.0.4"
