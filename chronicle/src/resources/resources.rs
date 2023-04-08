@@ -8,8 +8,11 @@ use cgmath::{Vector4, Vector3, Vector2, Quaternion, InnerSpace};
 use std::fs;
 use std::ffi::CString;
 use std::path::Path;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::resources::*;
+use crate::App;
 use crate::system::System;
 
 #[bitmask(u8)]
@@ -183,7 +186,7 @@ impl Resources {
                             
                                 let mut xyz = t - (n * n.dot(t));
                                 if xyz.magnitude() != 0.0 {
-                                    xyz.normalize();
+                                    xyz = xyz.normalize();
                                 }
                             
                                 let w;

@@ -1,10 +1,11 @@
-pub mod texture;
-pub use texture::*;
-pub mod model;
-pub use model::*;
+mod texture;
+use texture::*;
+mod model;
+use model::*;
+mod resource_manager;
+use resource_manager::*;
+mod resource;
+use resource::*;
+
 pub mod resources;
 pub use resources::*;
-pub mod resource_manager;
-pub use resource_manager::*;
-pub mod resource;
-pub use resource::*;

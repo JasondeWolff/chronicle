@@ -14,13 +14,3 @@ pub fn vk_to_string(raw_string_array: &[c_char]) -> String {
         .expect("Failed to convert vulkan raw string.")
         .to_owned()
 }
-
-pub fn read_shader_code(shader_path: &Path) -> Vec<u8> {
-    use std::fs::File;
-    use std::io::Read;
-
-    let spv_file = File::open(shader_path).expect(&format!("Failed to find spv file at {:?}", shader_path));
-    let bytes_code: Vec<u8> = spv_file.bytes().filter_map(|byte| byte.ok()).collect();
-
-    bytes_code
-}
