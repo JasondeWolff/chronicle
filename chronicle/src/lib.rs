@@ -16,21 +16,28 @@ thread_local! {
     static APP: RefCell<Option<App>> = RefCell::new(None);
 }
 
-pub fn init<G: Game + 'static>(game: Box<G>, core_loop: &CoreLoop) {
+pub fn init<G: Game + 'static>(title: &'static str, game: Box<G>, core_loop: &CoreLoop) {
     APP.with(|x| {
         *x.borrow_mut() = Some(App::new(game));
-        x.borrow_mut().as_mut().unwrap().init_systems(core_loop);
+        x.borrow_mut().as_mut().unwrap().init_window(title, core_loop);
     });
 }
 
-pub fn app<F: FnOnce(&RefCell<Option<App>>,)>(closure: F) {
-    APP.with(closure);
+pub fn app<R, F: FnOnce(&RefCell<Option<App>>,) -> R>(closure: F) -> R {
+    APP.with(closure)
 }
 
 #[macro_export]
 macro_rules! app_mut {
     ($x: ident) => {
         $x.borrow_mut().as_mut().unwrap()
+    }
+}
+
+#[macro_export]
+macro_rules! app_ref {
+    ($x: ident) => {
+        $x.borrow().as_ref().unwrap()
     }
 }
 
@@ -43,6 +50,7 @@ pub trait Game {
 }
 
 pub struct App {
+    window: Option<Box<graphics::Window>>,
     graphics: Option<Box<graphics::Renderer>>,
     resources: Option<Box<resources::Resources>>,
     game_timer: Timer,
@@ -54,6 +62,7 @@ pub struct App {
 impl App {
     pub fn new<G: Game + 'static>(game: Box<G>) -> Self {
         let mut app = App {
+            window: None,
             graphics: None,
             resources: None,
             game_timer: Timer::new(),
@@ -65,14 +74,29 @@ impl App {
         app
     }
 
-    fn init_systems(&mut self, core_loop: &CoreLoop) {
+    fn init_window(&mut self, title: &'static str, core_loop: &CoreLoop) {
+        app(|x| {
+            let brk = 0;
+        });
+        self.window = Some(graphics::Window::new(core_loop, title, 1280, 720));
+    }
+
+    fn init_systems(&mut self) {
+        app(|x| {
+            let brk = 0;
+        });
+
         self.resources = Some(resources::Resources::init());
-        self.graphics = Some(graphics::Renderer::init(core_loop));
+        self.graphics = Some(graphics::Renderer::init(&self.window()));
 
         self.game.start();
     }
 
     pub(crate) fn update(&mut self) {
+        if self.resources.is_none() {
+            self.init_systems();
+        }
+
         let delta_time = self.delta_timer.elapsed();
         self.delta_timer.reset();
 
@@ -91,6 +115,10 @@ impl App {
 
     pub fn time(&self) -> f32 {
         self.game_timer.elapsed()
+    }
+
+    pub fn window(&mut self) -> &mut graphics::Window {
+        self.window.as_mut().unwrap().as_mut()
     }
 
     pub fn graphics(&mut self) -> &mut graphics::Renderer {

@@ -5,16 +5,16 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new(core_loop: &CoreLoop, title: &'static str, width: u32, height: u32) -> Self {        
+    pub fn new(core_loop: &CoreLoop, title: &'static str, width: u32, height: u32) -> Box<Self> {        
         let window = winit::window::WindowBuilder::new()
             .with_title(title)
             .with_inner_size(winit::dpi::PhysicalSize::new(width, height))
             .build(&core_loop.winit_loop())
             .expect("Failed to create window.");
 
-        Window {
+        Box::new(Window {
             window: window
-        }
+        })
     }
 
     pub fn get_winit_window(&self) -> &winit::window::Window {

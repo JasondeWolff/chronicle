@@ -219,6 +219,10 @@ impl VkSwapchain {
 
         swapchain_imageviews
     }
+
+    pub fn get_extent(&self) -> &vk::Extent2D {
+        &self.swapchain_extent
+    }
 }
 
 impl Drop for VkSwapchain {

@@ -1,7 +1,9 @@
 use ash::vk;
 
 use std::rc::Rc;
-use std::cell::RefCell;
+
+pub mod window;
+pub use window::*;
 
 mod vk_device;
 use vk_device::*;
@@ -9,28 +11,26 @@ mod vk_instance;
 use vk_instance::*;
 mod vk_shader_module;
 use vk_shader_module::*;
+mod vk_pipeline;
+use vk_pipeline::*;
 mod vk_swapchain;
 use vk_swapchain::*;
-mod window;
-use window::*;
 mod utility;
 use utility::*;
 
-use crate::CoreLoop;
-
 pub struct Renderer {
-    window: Window,
     vk_instance: VkInstance,
     physical_device: VkPhysicalDevice,
     device: Rc<VkLogicalDevice>,
     graphics_queue: vk::Queue,
     present_queue: vk::Queue,
-    swapchain: VkSwapchain
+
+    swapchain: VkSwapchain,
+    pipeline: VkPipeline
 }
 
 impl Renderer {
-    pub fn init(core_loop: &CoreLoop) -> Box<Self> {
-        let window = Window::new(core_loop, "Chronicle", 1280, 720);
+    pub fn init(window: &Window) -> Box<Self> {
         let vk_instance = VkInstance::new("Chronicle", &window);
 
         let physical_device = VkPhysicalDevice::new(&vk_instance);
@@ -43,26 +43,25 @@ impl Renderer {
             window.width(),
             window.height()
         );
+        let pipeline = VkPipeline::new(
+            device.clone(),
+            swapchain.get_extent(),
+            &vec![String::from("shader.vert")]//, String::from("shader.frag")]
+        );
 
         Box::new(Renderer {
-            window: window,
             vk_instance: vk_instance,
 
             physical_device: physical_device,
             device: device,
             graphics_queue: graphics_queue,
             present_queue: present_queue,
-            swapchain: swapchain
+            swapchain: swapchain,
+            pipeline: pipeline
         })
     }
 
     pub fn update(&mut self) {
         
-    }
-}
-
-impl Renderer {
-    pub(crate) fn get_window(&self) -> &Window {
-        &self.window
     }
 }

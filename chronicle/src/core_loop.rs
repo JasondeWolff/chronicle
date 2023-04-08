@@ -46,7 +46,7 @@ impl CoreLoop {
                 },
                 | Event::MainEventsCleared => {
                     app(|app| {
-                        app_mut!(app).graphics().get_window().get_winit_window().request_redraw();
+                        app_mut!(app).window().get_winit_window().request_redraw();
                     });
                 },
                 | Event::RedrawRequested(_window_id) => {

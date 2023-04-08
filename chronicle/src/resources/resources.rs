@@ -8,11 +8,8 @@ use cgmath::{Vector4, Vector3, Vector2, Quaternion, InnerSpace};
 use std::fs;
 use std::ffi::CString;
 use std::path::Path;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 use crate::resources::*;
-use crate::App;
 use crate::system::System;
 
 #[bitmask(u8)]
@@ -24,6 +21,7 @@ pub struct Resources {
     model_manager: ResourceManager<Model>,
     text_manager: ResourceManager<String>,
     image_manager: ResourceManager<Texture>,
+    binary_blob_manager: ResourceManager<Vec<u8>>,
 
     pub kill_time: f32
 }
@@ -34,6 +32,7 @@ impl System for Resources {
             model_manager: ResourceManager::new(5.0),
             text_manager: ResourceManager::new(5.0),
             image_manager: ResourceManager::new(5.0),
+            binary_blob_manager: ResourceManager::new(5.0),
             kill_time: 5.0
         })
     }
@@ -291,7 +290,7 @@ impl Resources {
         match self.text_manager.get(&asset_path) {
             Some(resource) => resource,
             None => {
-                let contents = fs::read_to_string(asset_path.clone()).expect("Failed to read text file.");
+                let contents = fs::read_to_string(asset_path.clone()).expect(&format!("Failed to read text file at \"{:?}\"", asset_path));
                 let resource = Resource::new(contents);
 
                 self.text_manager.insert(resource.clone(), asset_path);
@@ -323,7 +322,7 @@ impl Resources {
                         &mut channels,
                         0,
                     );
-                    assert!(!data.is_null(), "Failed to read image.");
+                    assert!(!data.is_null(), "Failed to read texture file at \"{:?}\"", asset_path);
                     let data: Vec<u8> = std::slice::from_raw_parts(data, (width * height * channels) as usize).to_vec();
 
                     let resource = Resource::new(Texture {
@@ -336,6 +335,25 @@ impl Resources {
                     self.image_manager.insert(resource.clone(), asset_path);
                     resource
                 }
+            }
+        }
+    }
+
+    pub fn get_binary_blob(&mut self, asset_path: String) -> Resource<Vec<u8>> {
+        match self.binary_blob_manager.get(&asset_path) {
+            Some(resource) => resource,
+            None => {
+                use std::fs::File;
+                use std::io::Read;
+
+                let spv_file = File::open(&asset_path)
+                    .expect(&format!("Failed to read binary file at \"{:?}\"", asset_path));
+                let bytes_code: Vec<u8> = spv_file.bytes().filter_map(|byte| byte.ok()).collect();
+
+                let resource = Resource::new(bytes_code);
+
+                self.binary_blob_manager.insert(resource.clone(), asset_path);
+                resource
             }
         }
     }
