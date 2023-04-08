@@ -2,7 +2,6 @@ use winit::event::{Event, VirtualKeyCode, ElementState, KeyboardInput, WindowEve
 use winit::event_loop::{ControlFlow, EventLoop};
 
 use crate::app;
-use crate::app_mut;
 
 pub struct CoreLoop {
     event_loop: EventLoop<()>
@@ -45,14 +44,10 @@ impl CoreLoop {
                     }
                 },
                 | Event::MainEventsCleared => {
-                    app(|app| {
-                        app_mut!(app).window().get_winit_window().request_redraw();
-                    });
+                    app().window().get_winit_window().request_redraw();
                 },
                 | Event::RedrawRequested(_window_id) => {
-                    app(|app| {
-                        app_mut!(app).update();
-                    });
+                    app().update();
                 },
                 _ => (),
             }

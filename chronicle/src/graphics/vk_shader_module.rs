@@ -3,7 +3,7 @@ use std::rc::Rc;
 use ash::version::DeviceV1_0;
 
 use crate::graphics::*;
-use crate::{app, app_mut};
+use crate::app;
 
 pub struct VkShaderModule {
     device: Rc<VkLogicalDevice>,
@@ -13,15 +13,8 @@ pub struct VkShaderModule {
 
 impl VkShaderModule {
     pub fn new(device: Rc<VkLogicalDevice>, name: String) -> Self {
-        app(|app| {
-            app_mut!(app);//.resources().get_binary_blob(format!("assets/builtin/shaders/bin/{name}.spv"))
-        });
-
-        // let shader_code = app(|app| {
-        //     app_mut!(app).resources().get_binary_blob(format!("assets/builtin/shaders/bin/{name}.spv"))
-        // });
-
-        let shader_code = crate::resources::Resource::new(Vec::<u8>::new());
+        let shader_code = app().resources()
+            .get_binary_blob(format!("assets/builtin/shaders/bin/{name}.spv"));
 
         let create_info = vk::ShaderModuleCreateInfo {
             s_type: vk::StructureType::SHADER_MODULE_CREATE_INFO,

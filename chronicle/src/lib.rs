@@ -1,3 +1,5 @@
+#![feature(thread_local)]
+
 pub use std::rc::Rc;
 pub use std::cell::{RefCell, Ref, RefMut};
 
@@ -12,32 +14,19 @@ pub mod system;
 use common::Timer;
 use system::System;
 
-thread_local! {
-    static APP: RefCell<Option<App>> = RefCell::new(None);
-}
+#[thread_local]
+static mut APP: Option<Box<App>> = None;
 
 pub fn init<G: Game + 'static>(title: &'static str, game: Box<G>, core_loop: &CoreLoop) {
-    APP.with(|x| {
-        *x.borrow_mut() = Some(App::new(game));
-        x.borrow_mut().as_mut().unwrap().init_window(title, core_loop);
-    });
-}
-
-pub fn app<R, F: FnOnce(&RefCell<Option<App>>,) -> R>(closure: F) -> R {
-    APP.with(closure)
-}
-
-#[macro_export]
-macro_rules! app_mut {
-    ($x: ident) => {
-        $x.borrow_mut().as_mut().unwrap()
+    unsafe {
+        APP = Some(Box::new(App::new(game)));
+        APP.as_mut().unwrap().init_window(title, core_loop);
     }
 }
 
-#[macro_export]
-macro_rules! app_ref {
-    ($x: ident) => {
-        $x.borrow().as_ref().unwrap()
+pub fn app() -> &'static mut App {
+    unsafe {
+        APP.as_mut().unwrap()
     }
 }
 
@@ -75,17 +64,10 @@ impl App {
     }
 
     fn init_window(&mut self, title: &'static str, core_loop: &CoreLoop) {
-        app(|x| {
-            let brk = 0;
-        });
         self.window = Some(graphics::Window::new(core_loop, title, 1280, 720));
     }
 
     fn init_systems(&mut self) {
-        app(|x| {
-            let brk = 0;
-        });
-
         self.resources = Some(resources::Resources::init());
         self.graphics = Some(graphics::Renderer::init(&self.window()));
 

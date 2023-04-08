@@ -1,6 +1,6 @@
 extern crate chronicle;
 use chronicle::{CoreLoop, Game};
-use chronicle::{app, app_mut};
+use chronicle::app;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");

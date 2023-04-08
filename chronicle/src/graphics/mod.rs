@@ -46,7 +46,7 @@ impl Renderer {
         let pipeline = VkPipeline::new(
             device.clone(),
             swapchain.get_extent(),
-            &vec![String::from("shader.vert")]//, String::from("shader.frag")]
+            &vec![String::from("shader.vert"), String::from("shader.frag")]
         );
 
         Box::new(Renderer {
