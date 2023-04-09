@@ -14,6 +14,8 @@ pub struct VkSwapchain {
     swapchain_format: vk::Format,
     swapchain_extent: vk::Extent2D,
     swapchain_imageviews: Vec<vk::ImageView>,
+
+    framebuffers: Vec<vk::Framebuffer>
 }
 
 pub struct SwapChainSupportDetail {
@@ -104,7 +106,8 @@ impl VkSwapchain {
             swapchain_format: surface_format.format,
             swapchain_extent: extent,
             _swapchain_images: swapchain_images,
-            swapchain_imageviews: swapchain_imageviews
+            swapchain_imageviews: swapchain_imageviews,
+            framebuffers: Vec::new()
         }
     }
 
@@ -222,6 +225,38 @@ impl VkSwapchain {
 
     pub fn get_extent(&self) -> &vk::Extent2D {
         &self.swapchain_extent
+    }
+
+    pub fn get_format(&self) -> &vk::Format {
+        &self.swapchain_format
+    }
+
+    pub fn build_framebuffers(&mut self, render_pass: &VkRenderPass) {
+        self.framebuffers.clear();
+
+        for &image_view in self.swapchain_imageviews.iter() {
+            let attachments = [image_view];
+
+            let framebuffer_create_info = vk::FramebufferCreateInfo {
+                s_type: vk::StructureType::FRAMEBUFFER_CREATE_INFO,
+                p_next: std::ptr::null(),
+                flags: vk::FramebufferCreateFlags::empty(),
+                render_pass: *render_pass.get_render_pass(),
+                attachment_count: attachments.len() as u32,
+                p_attachments: attachments.as_ptr(),
+                width: self.swapchain_extent.width,
+                height: self.swapchain_extent.height,
+                layers: 1,
+            };
+
+            let framebuffer = unsafe {
+                self.device.get_device()
+                    .create_framebuffer(&framebuffer_create_info, None)
+                    .expect("Failed to create Framebuffer!")
+            };
+
+            self.framebuffers.push(framebuffer);
+        }
     }
 }
 

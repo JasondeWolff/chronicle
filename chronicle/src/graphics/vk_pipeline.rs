@@ -7,11 +7,12 @@ use crate::graphics::*;
 
 pub struct VkPipeline {
     device: Rc<VkLogicalDevice>,
-    pipeline_layout: vk::PipelineLayout
+    pipeline_layout: vk::PipelineLayout,
+    pipeline: vk::Pipeline
 }
 
 impl VkPipeline {
-    pub fn new(device: Rc<VkLogicalDevice>, extent: &vk::Extent2D, shaders: &Vec<String>) -> Self {
+    pub fn new(device: Rc<VkLogicalDevice>, extent: &vk::Extent2D, render_pass: &VkRenderPass, shaders: &Vec<String>) -> Self {
         let main_function_name = std::ffi::CString::new("main").unwrap();
 
         let mut shader_modules = Vec::new();
@@ -30,7 +31,7 @@ impl VkPipeline {
             shader_modules.push(shader_module);
         }
 
-        let _vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
+        let vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineVertexInputStateCreateFlags::empty(),
@@ -39,7 +40,7 @@ impl VkPipeline {
             vertex_binding_description_count: 0,
             p_vertex_binding_descriptions: ptr::null(),
         };
-        let _vertex_input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo {
+        let vertex_input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             flags: vk::PipelineInputAssemblyStateCreateFlags::empty(),
             p_next: ptr::null(),
@@ -61,7 +62,7 @@ impl VkPipeline {
             extent: *extent,
         }];
 
-        let _viewport_state_create_info = vk::PipelineViewportStateCreateInfo {
+        let viewport_state_create_info = vk::PipelineViewportStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_VIEWPORT_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineViewportStateCreateFlags::empty(),
@@ -71,7 +72,7 @@ impl VkPipeline {
             p_viewports: viewports.as_ptr(),
         };
 
-        let _rasterization_statue_create_info = vk::PipelineRasterizationStateCreateInfo {
+        let rasterization_statue_create_info = vk::PipelineRasterizationStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineRasterizationStateCreateFlags::empty(),
@@ -86,7 +87,7 @@ impl VkPipeline {
             depth_bias_enable: vk::FALSE,
             depth_bias_slope_factor: 0.0,
         };
-        let _multisample_state_create_info = vk::PipelineMultisampleStateCreateInfo {
+        let multisample_state_create_info = vk::PipelineMultisampleStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             flags: vk::PipelineMultisampleStateCreateFlags::empty(),
             p_next: ptr::null(),
@@ -108,7 +109,7 @@ impl VkPipeline {
             reference: 0,
         };
 
-        let _depth_state_create_info = vk::PipelineDepthStencilStateCreateInfo {
+        let depth_state_create_info = vk::PipelineDepthStencilStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineDepthStencilStateCreateFlags::empty(),
@@ -134,7 +135,7 @@ impl VkPipeline {
             alpha_blend_op: vk::BlendOp::ADD,
         }];
 
-        let _color_blend_state = vk::PipelineColorBlendStateCreateInfo {
+        let color_blend_state = vk::PipelineColorBlendStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineColorBlendStateCreateFlags::empty(),
@@ -171,9 +172,42 @@ impl VkPipeline {
                 .expect("Failed to create pipeline layout.")
         };
 
+        let graphic_pipeline_create_infos = [vk::GraphicsPipelineCreateInfo {
+            s_type: vk::StructureType::GRAPHICS_PIPELINE_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: vk::PipelineCreateFlags::empty(),
+            stage_count: shader_stages.len() as u32,
+            p_stages: shader_stages.as_ptr(),
+            p_vertex_input_state: &vertex_input_state_create_info,
+            p_input_assembly_state: &vertex_input_assembly_state_info,
+            p_tessellation_state: ptr::null(),
+            p_viewport_state: &viewport_state_create_info,
+            p_rasterization_state: &rasterization_statue_create_info,
+            p_multisample_state: &multisample_state_create_info,
+            p_depth_stencil_state: &depth_state_create_info,
+            p_color_blend_state: &color_blend_state,
+            p_dynamic_state: ptr::null(),
+            layout: pipeline_layout,
+            render_pass: *render_pass.get_render_pass(),
+            subpass: 0,
+            base_pipeline_handle: vk::Pipeline::null(),
+            base_pipeline_index: -1,
+        }];
+
+        let pipeline = unsafe {
+            device.get_device()
+                .create_graphics_pipelines(
+                    vk::PipelineCache::null(),
+                    &graphic_pipeline_create_infos,
+                    None,
+                )
+                .expect("Failed to create Graphics Pipeline.")
+        };
+
         VkPipeline {
             device: device,
-            pipeline_layout: pipeline_layout
+            pipeline_layout: pipeline_layout,
+            pipeline: pipeline[0]
         }
     }
 }

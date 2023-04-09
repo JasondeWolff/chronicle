@@ -68,6 +68,10 @@ impl VkRenderPass {
             render_pass: render_pass
         }
     }
+
+    pub fn get_render_pass(&self) -> &vk::RenderPass {
+        &self.render_pass
+    }
 }
 
 impl Drop for VkRenderPass {
