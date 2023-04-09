@@ -11,6 +11,8 @@ mod vk_instance;
 use vk_instance::*;
 mod vk_shader_module;
 use vk_shader_module::*;
+mod vk_render_pass;
+use vk_render_pass::*;
 mod vk_pipeline;
 use vk_pipeline::*;
 mod vk_swapchain;
