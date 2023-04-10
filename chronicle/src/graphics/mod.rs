@@ -21,6 +21,10 @@ mod vk_cmd_pool;
 use vk_cmd_pool::*;
 mod vk_cmd_buffer;
 use vk_cmd_buffer::*;
+mod vk_fence;
+use vk_fence::*;
+mod vk_semaphore;
+use vk_semaphore::*;
 mod utility;
 use utility::*;
 
@@ -40,7 +44,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn init(window: &Window) -> Box<Self> {
+    pub(crate) fn init(window: &Window) -> Box<Self> {
         let vk_instance = VkInstance::new("Chronicle", &window);
 
         let physical_device = VkPhysicalDevice::new(&vk_instance);
@@ -62,7 +66,7 @@ impl Renderer {
         swapchain.build_framebuffers(&render_pass);
 
         let graphics_cmd_pool = VkCmdPool::new(device.clone());
-        let graphics_cmd_buffer = VkCmdBuffer::new(device.clone(), &graphics_cmd_pool);
+        let graphics_cmd_buffer = VkCmdBuffer::new(device.clone(), &graphics_cmd_pool, &swapchain);
 
         for (i, cmd_buffer) in graphics_cmd_buffer.iter().enumerate() {
             cmd_buffer.begin();
@@ -87,7 +91,20 @@ impl Renderer {
         })
     }
 
-    pub fn update(&mut self) {
-        
+    pub(crate) fn update(&mut self) {
+        self.render();
+    }
+
+    fn render(&mut self) {
+        let (img_idx, fence) = self.swapchain.next_image();
+        let img_available = self.swapchain.image_available_semaphore();
+        let render_finished = self.swapchain.render_finished_semaphore();
+
+        self.graphics_cmd_buffers[img_idx as usize].submit(
+            &vec![img_available.as_ref()],
+            &vec![render_finished.as_ref()],
+            fence
+        );
+        self.swapchain.present(img_idx, &vec![render_finished.as_ref()]);
     }
 }

@@ -13,11 +13,11 @@ pub struct VkCmdBuffer {
 }
 
 impl VkCmdBuffer {
-    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: &VkCmdPool) -> Vec<Self> {
+    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: &VkCmdPool, swapchain: &VkSwapchain) -> Vec<Self> {
         let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             p_next: ptr::null(),
-            command_buffer_count: MAX_FRAMES_IN_FLIGHT as u32,
+            command_buffer_count: swapchain.get_framebuffer_count() as u32,
             command_pool: *cmd_pool.get_cmd_pool(),
             level: vk::CommandBufferLevel::PRIMARY,
         };
@@ -40,6 +40,42 @@ impl VkCmdBuffer {
 
     pub fn get_cmd_buffer(&self)-> &vk::CommandBuffer {
         &self.cmd_buffer
+    }
+
+    pub fn submit(&self, wait_semaphores: &Vec<&VkSemaphore>, signal_semaphores: &Vec<&VkSemaphore>, fence: &VkFence) {
+        let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
+
+        let mut wait_semaphores_raw = Vec::new();
+        for wait_semaphore in wait_semaphores {
+            wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
+        }
+
+        let mut signal_semaphores_raw = Vec::new();
+        for signal_semaphore in signal_semaphores {
+            signal_semaphores_raw.push(*signal_semaphore.get_semaphore());
+        }
+
+        let submit_infos = [vk::SubmitInfo {
+            s_type: vk::StructureType::SUBMIT_INFO,
+            p_next: ptr::null(),
+            wait_semaphore_count: wait_semaphores_raw.len() as u32,
+            p_wait_semaphores: wait_semaphores_raw.as_ptr(),
+            p_wait_dst_stage_mask: wait_stages.as_ptr(),
+            command_buffer_count: 1,
+            p_command_buffers: &self.cmd_buffer,
+            signal_semaphore_count: signal_semaphores_raw.len() as u32,
+            p_signal_semaphores: signal_semaphores_raw.as_ptr(),
+        }];
+
+        unsafe {
+            self.device.get_device()
+                .queue_submit(
+                    self.device.get_graphics_queue(),
+                    &submit_infos,
+                    *fence.get_fence(),
+                )
+                .expect("Failed to execute queue submit.");
+        }
     }
 
     pub fn begin(&self) {

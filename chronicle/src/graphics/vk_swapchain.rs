@@ -2,8 +2,10 @@ use ash::vk;
 use ash::version::DeviceV1_0;
 
 use std::rc::Rc;
+use std::ptr;
 
 use crate::graphics::*;
+use utility::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct VkSwapchain {
     device: Rc<VkLogicalDevice>,
@@ -15,7 +17,12 @@ pub struct VkSwapchain {
     swapchain_extent: vk::Extent2D,
     swapchain_imageviews: Vec<vk::ImageView>,
 
-    framebuffers: Vec<vk::Framebuffer>
+    framebuffers: Vec<vk::Framebuffer>,
+
+    image_available_semaphores: Vec<Rc<VkSemaphore>>,
+    render_finished_semaphores: Vec<Rc<VkSemaphore>>,
+    inflight_fences: Vec<VkFence>,
+    current_frame: usize
 }
 
 pub struct SwapChainSupportDetail {
@@ -98,6 +105,15 @@ impl VkSwapchain {
             &swapchain_images,
         );
 
+        let mut image_available_semaphores = Vec::new();
+        let mut render_finished_semaphores = Vec::new();
+        let mut inflight_fences = Vec::new();
+        for _ in 0..MAX_FRAMES_IN_FLIGHT {
+            image_available_semaphores.push(VkSemaphore::new(device.clone()));
+            render_finished_semaphores.push(VkSemaphore::new(device.clone()));
+            inflight_fences.push(VkFence::new(device.clone()));
+        }
+
         VkSwapchain {
             device: device,
 
@@ -107,7 +123,11 @@ impl VkSwapchain {
             swapchain_extent: extent,
             _swapchain_images: swapchain_images,
             swapchain_imageviews: swapchain_imageviews,
-            framebuffers: Vec::new()
+            framebuffers: Vec::new(),
+            image_available_semaphores: image_available_semaphores,
+            render_finished_semaphores: render_finished_semaphores,
+            inflight_fences: inflight_fences,
+            current_frame: 0
         }
     }
 
@@ -261,6 +281,64 @@ impl VkSwapchain {
 
     pub fn get_framebuffer(&self, idx: usize) -> &vk::Framebuffer {
         &self.framebuffers[idx]
+    }
+
+    pub fn get_framebuffer_count(&self) -> usize {
+        self.framebuffers.len()
+    }
+
+    pub fn next_image(&self) -> (u32, &VkFence) {
+        self.inflight_fences[self.current_frame].wait();
+
+        let image_idx = unsafe {
+            self.swapchain_loader
+                .acquire_next_image(
+                    self.swapchain,
+                    std::u64::MAX,
+                    *self.image_available_semaphores[self.current_frame].get_semaphore(),
+                    vk::Fence::null(),
+                )
+                .expect("Failed to acquire next image.").0
+        };
+
+        self.inflight_fences[self.current_frame].reset();
+
+        (image_idx, &self.inflight_fences[self.current_frame])
+    }
+
+    pub fn image_available_semaphore(&self) -> Rc<VkSemaphore> {
+        self.image_available_semaphores[self.current_frame].clone()
+    }
+
+    pub fn render_finished_semaphore(&self) -> Rc<VkSemaphore> {
+        self.render_finished_semaphores[self.current_frame].clone()
+    }
+
+    pub fn present(&mut self, image_idx: u32, wait_semaphores: &Vec<&VkSemaphore>) {
+        let mut wait_semaphores_raw = Vec::new();
+        for wait_semaphore in wait_semaphores {
+            wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
+        }
+
+        let swapchains = [self.swapchain];
+        let present_info = vk::PresentInfoKHR {
+            s_type: vk::StructureType::PRESENT_INFO_KHR,
+            p_next: ptr::null(),
+            wait_semaphore_count: 1,
+            p_wait_semaphores: wait_semaphores_raw.as_ptr(),
+            swapchain_count: 1,
+            p_swapchains: swapchains.as_ptr(),
+            p_image_indices: &image_idx,
+            p_results: ptr::null_mut(),
+        };
+
+        unsafe {
+            self.swapchain_loader
+                .queue_present(self.device.get_present_queue(), &present_info)
+                .expect("Failed to execute queue present.");
+        }
+
+        self.current_frame = (self.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 }
 
