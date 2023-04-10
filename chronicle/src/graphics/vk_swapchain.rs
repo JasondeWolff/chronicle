@@ -258,6 +258,10 @@ impl VkSwapchain {
             self.framebuffers.push(framebuffer);
         }
     }
+
+    pub fn get_framebuffer(&self, idx: usize) -> &vk::Framebuffer {
+        &self.framebuffers[idx]
+    }
 }
 
 impl Drop for VkSwapchain {

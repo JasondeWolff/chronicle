@@ -210,6 +210,10 @@ impl VkPipeline {
             pipeline: pipeline[0]
         }
     }
+
+    pub fn get_pipeline(&self) -> &vk::Pipeline {
+        &self.pipeline
+    }
 }
 
 impl Drop for VkPipeline {

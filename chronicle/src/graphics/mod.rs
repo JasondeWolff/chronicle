@@ -36,7 +36,7 @@ pub struct Renderer {
     pipeline: VkPipeline,
 
     graphics_cmd_pool: VkCmdPool,
-    graphics_cmd_buffer: VkCmdBuffer
+    graphics_cmd_buffers: Vec<VkCmdBuffer>
 }
 
 impl Renderer {
@@ -64,6 +64,15 @@ impl Renderer {
         let graphics_cmd_pool = VkCmdPool::new(device.clone());
         let graphics_cmd_buffer = VkCmdBuffer::new(device.clone(), &graphics_cmd_pool);
 
+        for (i, cmd_buffer) in graphics_cmd_buffer.iter().enumerate() {
+            cmd_buffer.begin();
+            cmd_buffer.begin_render_pass(&render_pass, &swapchain, i);
+            cmd_buffer.bind_graphics_pipeline(&pipeline);
+            cmd_buffer.draw(3, 1, 0, 0);
+            cmd_buffer.end_render_pass();
+            cmd_buffer.end();
+        }
+
         Box::new(Renderer {
             vk_instance: vk_instance,
             physical_device: physical_device,
@@ -74,7 +83,7 @@ impl Renderer {
             render_pass: render_pass,
             pipeline: pipeline,
             graphics_cmd_pool: graphics_cmd_pool,
-            graphics_cmd_buffer: graphics_cmd_buffer
+            graphics_cmd_buffers: graphics_cmd_buffer
         })
     }
 
