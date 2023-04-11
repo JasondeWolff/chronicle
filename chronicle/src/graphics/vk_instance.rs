@@ -36,7 +36,7 @@ impl VkInstance {
     }
 
     fn create_instance(entry: &ash::Entry, title: &'static str) -> ash::Instance {
-        if !(VALIDATION.is_enable && utility::debug::check_validation_layer_support(entry, &VALIDATION.required_validation_layers.to_vec())) {
+        if VALIDATION.is_enable && !utility::debug::check_validation_layer_support(entry, &VALIDATION.required_validation_layers.to_vec()) {
             panic!("Failed to enable validation layers.");
         }
 
