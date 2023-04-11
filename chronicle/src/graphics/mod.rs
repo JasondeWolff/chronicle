@@ -88,25 +88,28 @@ impl Renderer {
     }
 
     fn render(&mut self) {
-        let (img_idx, fence) = self.swapchain.as_ref().unwrap().next_image();
-        let img_available = self.swapchain.as_ref().unwrap().image_available_semaphore();
-        let render_finished = self.swapchain.as_ref().unwrap().render_finished_semaphore();
+        if let Some(swapchain) = self.swapchain.as_ref() {
+            let (img_idx, fence) = swapchain.next_image();
+            let img_available = swapchain.image_available_semaphore();
+            let render_finished = swapchain.render_finished_semaphore();
 
-        let cmd_buffer = &self.graphics_cmd_buffers[img_idx as usize];
-        cmd_buffer.reset();
-        cmd_buffer.begin();
-        cmd_buffer.begin_render_pass(&self.render_pass, &self.swapchain.as_ref().unwrap(), img_idx as usize);
-        cmd_buffer.bind_graphics_pipeline(&self.pipeline);
-        cmd_buffer.draw(3, 1, 0, 0);
-        cmd_buffer.end_render_pass();
-        cmd_buffer.end();
+            let cmd_buffer = &self.graphics_cmd_buffers[img_idx as usize];
+            cmd_buffer.reset();
+            cmd_buffer.begin();
+            cmd_buffer.set_viewport(swapchain.get_extent());
+            cmd_buffer.begin_render_pass(&self.render_pass, swapchain, img_idx as usize);
+            cmd_buffer.bind_graphics_pipeline(&self.pipeline);
+            cmd_buffer.draw(3, 1, 0, 0);
+            cmd_buffer.end_render_pass();
+            cmd_buffer.end();
 
-        cmd_buffer.submit(
-            &vec![img_available.as_ref()],
-            &vec![render_finished.as_ref()],
-            fence
-        );
-        self.swapchain.as_mut().unwrap().present(img_idx, &vec![render_finished.as_ref()]);
+            cmd_buffer.submit(
+                &vec![img_available.as_ref()],
+                &vec![render_finished.as_ref()],
+                fence
+            );
+            self.swapchain.as_mut().unwrap().present(img_idx, &vec![render_finished.as_ref()]);
+        }
     }
 
     pub(crate) fn wait_idle(&self) {
@@ -121,12 +124,13 @@ impl Renderer {
         self.wait_idle();
 
         self.swapchain = None;
-        self.swapchain = Some(VkSwapchain::new(
-            &self.vk_instance,
-            self.device.clone(), &self.physical_device,
-            width, height
-        ));
-        self.swapchain.as_mut().unwrap().build_framebuffers(&self.render_pass);
-
+        if width > 0 && height > 0 {
+            self.swapchain = Some(VkSwapchain::new(
+                &self.vk_instance,
+                self.device.clone(), &self.physical_device,
+                width, height
+            ));
+            self.swapchain.as_mut().unwrap().build_framebuffers(&self.render_pass);
+        }
     }
 }

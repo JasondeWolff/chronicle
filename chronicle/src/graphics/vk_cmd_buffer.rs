@@ -112,6 +112,38 @@ impl VkCmdBuffer {
         }
     }
 
+    pub fn set_viewport(&self, extent: &vk::Extent2D) {
+        let viewports = [vk::Viewport {
+            x: 0.0,
+            y: 0.0,
+            width: extent.width as f32,
+            height: extent.height as f32,
+            min_depth: 0.0,
+            max_depth: 1.0,
+        }];
+
+        let scissors = [vk::Rect2D {
+            offset: vk::Offset2D { x: 0, y: 0 },
+            extent: *extent,
+        }];
+
+        unsafe {
+            self.device.get_device()
+                .cmd_set_viewport(
+                    self.cmd_buffer,
+                    0,
+                    &viewports
+                );
+
+            self.device.get_device()
+                .cmd_set_scissor(
+                    self.cmd_buffer, 
+                    0, 
+                    &scissors
+                );
+        }
+    }
+
     pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain, frame_idx: usize) {
         let clear_values = [vk::ClearValue {
             color: vk::ClearColorValue {

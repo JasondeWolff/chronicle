@@ -146,15 +146,14 @@ impl VkPipeline {
             blend_constants: [0.0, 0.0, 0.0, 0.0],
         };
 
-        //                leaving the dynamic statue unconfigurated right now
-        //                let dynamic_state = [vk::DynamicState::VIEWPORT, vk::DynamicState::SCISSOR];
-        //                let dynamic_state_info = vk::PipelineDynamicStateCreateInfo {
-        //                    s_type: vk::StructureType::PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        //                    p_next: ptr::null(),
-        //                    flags: vk::PipelineDynamicStateCreateFlags::empty(),
-        //                    dynamic_state_count: dynamic_state.len() as u32,
-        //                    p_dynamic_states: dynamic_state.as_ptr(),
-        //                };
+        let dynamic_state = [vk::DynamicState::VIEWPORT, vk::DynamicState::SCISSOR];
+        let dynamic_state_info = vk::PipelineDynamicStateCreateInfo {
+            s_type: vk::StructureType::PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: vk::PipelineDynamicStateCreateFlags::empty(),
+            dynamic_state_count: dynamic_state.len() as u32,
+            p_dynamic_states: dynamic_state.as_ptr(),
+        };
 
         let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo {
             s_type: vk::StructureType::PIPELINE_LAYOUT_CREATE_INFO,
@@ -186,7 +185,7 @@ impl VkPipeline {
             p_multisample_state: &multisample_state_create_info,
             p_depth_stencil_state: &depth_state_create_info,
             p_color_blend_state: &color_blend_state,
-            p_dynamic_state: ptr::null(),
+            p_dynamic_state: &dynamic_state_info,
             layout: pipeline_layout,
             render_pass: *render_pass.get_render_pass(),
             subpass: 0,
