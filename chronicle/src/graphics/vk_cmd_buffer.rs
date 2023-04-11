@@ -78,6 +78,17 @@ impl VkCmdBuffer {
         }
     }
 
+    pub fn reset(&self) {
+        unsafe {
+            self.device.get_device()
+                .reset_command_buffer(
+                    self.cmd_buffer,
+                    vk::CommandBufferResetFlags::empty()
+                )
+                .expect("Failed to execute queue reset.");
+        }
+    }
+
     pub fn begin(&self) {
         let command_buffer_begin_info = vk::CommandBufferBeginInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_BEGIN_INFO,

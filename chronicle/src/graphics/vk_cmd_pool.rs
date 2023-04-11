@@ -16,7 +16,7 @@ impl VkCmdPool {
         let command_pool_create_info = vk::CommandPoolCreateInfo {
             s_type: vk::StructureType::COMMAND_POOL_CREATE_INFO,
             p_next: ptr::null(),
-            flags: vk::CommandPoolCreateFlags::empty(),
+            flags: vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER,
             queue_family_index: device.get_queue_family_indices().graphics_family.unwrap(),
         };
 

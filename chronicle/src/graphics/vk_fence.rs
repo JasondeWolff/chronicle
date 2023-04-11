@@ -12,7 +12,7 @@ pub struct VkFence {
 }
 
 impl VkFence {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Self {
+    pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
         let fence_create_info = vk::FenceCreateInfo {
             s_type: vk::StructureType::FENCE_CREATE_INFO,
             p_next: ptr::null(),
@@ -24,10 +24,10 @@ impl VkFence {
             .expect("Failed to create Semaphore Object.")
         };
 
-        VkFence {
+        Rc::new(VkFence {
             device: device,
             fence: fence
-        }
+        })
     }
 
     pub fn get_fence(&self) -> &vk::Fence {

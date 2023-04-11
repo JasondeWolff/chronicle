@@ -28,6 +28,9 @@ impl CoreLoop {
                         | WindowEvent::CloseRequested => {
                             *control_flow = ControlFlow::Exit
                         },
+                        | WindowEvent::Resized(size) => {
+                            app().graphics().resize(size.width, size.height);
+                        },
                         | WindowEvent::KeyboardInput { input, .. } => {
                             match input {
                                 | KeyboardInput { virtual_keycode, state, .. } => {
@@ -48,6 +51,9 @@ impl CoreLoop {
                 },
                 | Event::RedrawRequested(_window_id) => {
                     app().update();
+                },
+                | Event::LoopDestroyed => {
+                    app().graphics().wait_idle();
                 },
                 _ => (),
             }
