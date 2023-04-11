@@ -50,7 +50,7 @@ pub struct App {
 
 impl App {
     pub fn new<G: Game + 'static>(game: Box<G>) -> Self {
-        let mut app = App {
+        let app = App {
             window: None,
             graphics: None,
             resources: None,

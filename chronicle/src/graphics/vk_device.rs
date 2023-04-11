@@ -186,7 +186,7 @@ impl VkLogicalDevice {
 
         let queue_priorities = [1.0_f32];
         let mut queue_create_infos = vec![];
-        for &queue_family in unique_queue_families.iter() {
+        for &_queue_family in unique_queue_families.iter() {
             let queue_create_info = vk::DeviceQueueCreateInfo {
                 s_type: vk::StructureType::DEVICE_QUEUE_CREATE_INFO,
                 p_next: ptr::null(),

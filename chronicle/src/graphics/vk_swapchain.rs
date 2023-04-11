@@ -279,10 +279,6 @@ impl VkSwapchain {
         }
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        
-    }
-
     pub fn get_framebuffer(&self, idx: usize) -> &vk::Framebuffer {
         &self.framebuffers[idx]
     }
@@ -316,10 +312,6 @@ impl VkSwapchain {
 
     pub fn render_finished_semaphore(&self) -> Rc<VkSemaphore> {
         self.render_finished_semaphores[self.current_frame].clone()
-    }
-
-    pub fn inflight_fence(&self) -> Rc<VkFence> {
-        self.inflight_fences[self.current_frame].clone()
     }
 
     pub fn present(&mut self, image_idx: u32, wait_semaphores: &Vec<&VkSemaphore>) {

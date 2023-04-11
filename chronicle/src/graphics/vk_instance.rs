@@ -9,7 +9,7 @@ use std::ptr;
 use std::os::raw::c_void;
 
 pub struct VkInstance {
-    entry: ash::Entry,
+    _entry: ash::Entry,
     instance: ash::Instance,
     debug_utils_loader: ash::extensions::ext::DebugUtils,
     debug_messenger: vk::DebugUtilsMessengerEXT,
@@ -26,7 +26,7 @@ impl VkInstance {
         let surface_loader = ash::extensions::khr::Surface::new(&entry, &instance);
 
         VkInstance {
-            entry,
+            _entry: entry,
             instance,
             debug_utils_loader,
             debug_messenger,
@@ -101,10 +101,6 @@ impl VkInstance {
         };
 
         instance
-    }
-
-    pub fn get_entry(&self) -> &ash::Entry {
-        &self.entry
     }
 
     pub fn get_instance(&self) -> &ash::Instance {

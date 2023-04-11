@@ -1,6 +1,5 @@
 extern crate chronicle;
 use chronicle::{CoreLoop, Game};
-use chronicle::app;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -25,7 +24,7 @@ impl Game for Example {
         
     }
 
-    fn update(&mut self, delta_time: f32) {
+    fn update(&mut self, _delta_time: f32) {
         
     }
 

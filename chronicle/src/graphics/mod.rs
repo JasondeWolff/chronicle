@@ -27,20 +27,19 @@ use vk_fence::*;
 mod vk_semaphore;
 use vk_semaphore::*;
 mod utility;
-use utility::*;
 
 pub struct Renderer {
     vk_instance: VkInstance,
     physical_device: VkPhysicalDevice,
     device: Rc<VkLogicalDevice>,
-    graphics_queue: vk::Queue,
-    present_queue: vk::Queue,
+    _graphics_queue: vk::Queue,
+    _present_queue: vk::Queue,
 
     swapchain: Option<VkSwapchain>,
     render_pass: VkRenderPass,
     pipeline: VkPipeline,
 
-    graphics_cmd_pool: VkCmdPool,
+    _graphics_cmd_pool: VkCmdPool,
     graphics_cmd_buffers: Vec<VkCmdBuffer>
 }
 
@@ -60,7 +59,7 @@ impl Renderer {
         let render_pass = VkRenderPass::new(device.clone(), *swapchain.get_format());
         let pipeline = VkPipeline::new(
             device.clone(),
-            swapchain.get_extent(), // NOTE!!!!!
+            swapchain.get_extent(),
             &render_pass,
             &vec![String::from("shader.vert"), String::from("shader.frag")]
         );
@@ -73,12 +72,12 @@ impl Renderer {
             vk_instance: vk_instance,
             physical_device: physical_device,
             device: device,
-            graphics_queue: graphics_queue,
-            present_queue: present_queue,
+            _graphics_queue: graphics_queue,
+            _present_queue: present_queue,
             swapchain: Some(swapchain),
             render_pass: render_pass,
             pipeline: pipeline,
-            graphics_cmd_pool: graphics_cmd_pool,
+            _graphics_cmd_pool: graphics_cmd_pool,
             graphics_cmd_buffers: graphics_cmd_buffer
         })
     }

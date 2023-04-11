@@ -5,7 +5,6 @@ use ash::version::DeviceV1_0;
 use ash::vk;
 
 use crate::graphics::*;
-use utility::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct VkCmdBuffer {
     device: Rc<VkLogicalDevice>,
@@ -36,10 +35,6 @@ impl VkCmdBuffer {
             });
         }
         cmd_buffers
-    }
-
-    pub fn get_cmd_buffer(&self)-> &vk::CommandBuffer {
-        &self.cmd_buffer
     }
 
     pub fn submit(&self, wait_semaphores: &Vec<&VkSemaphore>, signal_semaphores: &Vec<&VkSemaphore>, fence: &VkFence) {
