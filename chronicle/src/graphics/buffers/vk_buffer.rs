@@ -115,6 +115,10 @@ impl VkBuffer {
     pub fn get_memory(&self) -> vk::DeviceMemory {
         self.memory
     }
+
+    pub fn get_size(&self) -> vk::DeviceSize {
+        self.size
+    }
 }
 
 impl Drop for VkBuffer {

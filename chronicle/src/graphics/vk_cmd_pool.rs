@@ -12,7 +12,7 @@ pub struct VkCmdPool {
 }
 
 impl VkCmdPool {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Self {
+    pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
         let command_pool_create_info = vk::CommandPoolCreateInfo {
             s_type: vk::StructureType::COMMAND_POOL_CREATE_INFO,
             p_next: ptr::null(),
@@ -26,14 +26,14 @@ impl VkCmdPool {
                 .expect("Failed to create Command Pool.")
         };
 
-        VkCmdPool {
+        Rc::new(VkCmdPool {
             device: device,
             cmd_pool: cmd_pool
-        }
+        })
     }
 
-    pub fn get_cmd_pool(&self) -> &vk::CommandPool {
-        &self.cmd_pool
+    pub fn get_cmd_pool(&self) -> vk::CommandPool {
+        self.cmd_pool
     }
 }
 

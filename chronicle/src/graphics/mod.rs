@@ -1,11 +1,13 @@
 use ash::vk;
 use ash::version::DeviceV1_0;
 
+use cgmath::{Deg, Matrix4, Point3, Vector3, Zero};
+
 use std::rc::Rc;
 
 use crate::resources::{Model, Resource};
 use crate::common::RcCell;
-use crate::vec_remove_multiple;
+use crate::{vec_remove_multiple, app};
 
 pub mod transform;
 pub use transform::*;
@@ -62,6 +64,23 @@ impl DynamicRenderModel {
     }
 }
 
+#[repr(C)]
+struct UBO {
+    model: Matrix4<f32>,
+    view: Matrix4<f32>,
+    proj: Matrix4<f32>
+}
+
+impl Default for UBO {
+    fn default() -> Self {
+        UBO {
+            model: Matrix4::zero(),
+            view: Matrix4::zero(),
+            proj: Matrix4::zero()
+        }
+    }
+}
+
 pub struct Renderer {
     vk_instance: VkInstance,
     physical_device: VkPhysicalDevice,
@@ -73,10 +92,11 @@ pub struct Renderer {
     render_pass: VkRenderPass,
     pipeline: VkPipeline,
 
-    _graphics_cmd_pool: VkCmdPool,
+    graphics_cmd_pool: Rc<VkCmdPool>,
     graphics_cmd_buffers: Vec<VkCmdBuffer>,
 
-    dynamic_models: Vec<DynamicRenderModel>
+    dynamic_models: Vec<DynamicRenderModel>,
+    ubo: Vec<VkUniformBuffer<UBO>>
 }
 
 impl Renderer {
@@ -102,7 +122,15 @@ impl Renderer {
         swapchain.build_framebuffers(&render_pass);
 
         let graphics_cmd_pool = VkCmdPool::new(device.clone());
-        let graphics_cmd_buffer = VkCmdBuffer::new(device.clone(), &graphics_cmd_pool, &swapchain);
+        let graphics_cmd_buffer = VkCmdBuffer::new(device.clone(), graphics_cmd_pool.clone(), swapchain.get_framebuffer_count() as u32);
+
+        let mut ubo = Vec::new();
+        for _ in 0..swapchain.get_framebuffer_count() {
+            ubo.push(VkUniformBuffer::new(
+                device.clone(),
+                &physical_device
+            ));
+        }
 
         Box::new(Renderer {
             vk_instance: vk_instance,
@@ -113,10 +141,11 @@ impl Renderer {
             swapchain: Some(swapchain),
             render_pass: render_pass,
             pipeline: pipeline,
-            _graphics_cmd_pool: graphics_cmd_pool,
+            graphics_cmd_pool: graphics_cmd_pool,
             graphics_cmd_buffers: graphics_cmd_buffer,
 
-            dynamic_models: Vec::new()
+            dynamic_models: Vec::new(),
+            ubo: ubo
         })
     }
 
@@ -141,9 +170,24 @@ impl Renderer {
             let img_available = swapchain.image_available_semaphore();
             let render_finished = swapchain.render_finished_semaphore();
 
+            let time = app().time();
+            let UBO = self.ubo[img_idx as usize].data();
+            UBO.model = Matrix4::from_angle_z(Deg(90.0 * time));
+            UBO.view = Matrix4::look_at(
+                Point3::new(2.0, 2.0, 2.0),
+                Point3::new(0.0, 0.0, 0.0),
+                Vector3::new(0.0, 0.0, 1.0),
+            );
+            UBO.proj = cgmath::perspective(
+                Deg(45.0),
+                app().window().width() as f32 / app().window().height() as f32,
+                0.1,
+                10.0,
+            );
+
             let cmd_buffer = &self.graphics_cmd_buffers[img_idx as usize];
             cmd_buffer.reset();
-            cmd_buffer.begin();
+            cmd_buffer.begin(vk::CommandBufferUsageFlags::SIMULTANEOUS_USE);
             cmd_buffer.set_viewport(swapchain.get_extent());
             cmd_buffer.begin_render_pass(&self.render_pass, swapchain, img_idx as usize);
             cmd_buffer.bind_graphics_pipeline(&self.pipeline);
@@ -154,9 +198,9 @@ impl Renderer {
             cmd_buffer.end();
 
             cmd_buffer.submit(
-                &vec![img_available.as_ref()],
-                &vec![render_finished.as_ref()],
-                fence
+                Some(&vec![img_available.as_ref()]),
+                Some(&vec![render_finished.as_ref()]),
+                Some(fence)
             );
             self.swapchain.as_mut().unwrap().present(img_idx, &vec![render_finished.as_ref()]);
         }
@@ -194,7 +238,9 @@ impl Renderer {
             meshes.push(VkMesh::new(
                 self.device.clone(),
                 &self.physical_device,
-                &mesh.vertices
+                self.graphics_cmd_pool.clone(),
+                &mesh.vertices,
+                &mesh.indices
             ));
         }
 

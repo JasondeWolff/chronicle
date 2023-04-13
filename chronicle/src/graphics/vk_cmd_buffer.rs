@@ -8,16 +8,17 @@ use crate::graphics::*;
 
 pub struct VkCmdBuffer {
     device: Rc<VkLogicalDevice>,
+    cmd_pool: Rc<VkCmdPool>,
     cmd_buffer: vk::CommandBuffer
 }
 
 impl VkCmdBuffer {
-    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: &VkCmdPool, swapchain: &VkSwapchain) -> Vec<Self> {
+    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: Rc<VkCmdPool>, count: u32) -> Vec<Self> {
         let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             p_next: ptr::null(),
-            command_buffer_count: swapchain.get_framebuffer_count() as u32,
-            command_pool: *cmd_pool.get_cmd_pool(),
+            command_buffer_count: count,
+            command_pool: cmd_pool.get_cmd_pool(),
             level: vk::CommandBufferLevel::PRIMARY,
         };
 
@@ -31,43 +32,64 @@ impl VkCmdBuffer {
         for command_buffer in command_buffers {
             cmd_buffers.push(VkCmdBuffer {
                 device: device.clone(),
+                cmd_pool: cmd_pool.clone(),
                 cmd_buffer: command_buffer
             });
         }
         cmd_buffers
     }
 
-    pub fn submit(&self, wait_semaphores: &Vec<&VkSemaphore>, signal_semaphores: &Vec<&VkSemaphore>, fence: &VkFence) {
+    pub fn submit(&self, wait_semaphores: Option<&Vec<&VkSemaphore>>, signal_semaphores: Option<&Vec<&VkSemaphore>>, fence: Option<&VkFence>) {
         let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
         let mut wait_semaphores_raw = Vec::new();
-        for wait_semaphore in wait_semaphores {
-            wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
-        }
-
         let mut signal_semaphores_raw = Vec::new();
-        for signal_semaphore in signal_semaphores {
-            signal_semaphores_raw.push(*signal_semaphore.get_semaphore());
-        }
 
+        let (wait_semaphore_count, p_wait_semaphores) = match wait_semaphores {
+            Some(wait_semaphores) => {
+                for wait_semaphore in wait_semaphores {
+                    wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
+                }
+
+                (wait_semaphores.len() as u32, wait_semaphores_raw.as_ptr())
+            },
+            None => (0, ptr::null())
+        };
+
+        let (signal_semaphore_count, p_signal_semaphores) = match signal_semaphores {
+            Some(signal_semaphores) => {
+                for signal_semaphore in signal_semaphores {
+                    signal_semaphores_raw.push(*signal_semaphore.get_semaphore());
+                }
+
+                (signal_semaphores.len() as u32, signal_semaphores_raw.as_ptr())
+            },
+            None => (0, ptr::null())
+        };
+        
         let submit_infos = [vk::SubmitInfo {
             s_type: vk::StructureType::SUBMIT_INFO,
             p_next: ptr::null(),
-            wait_semaphore_count: wait_semaphores_raw.len() as u32,
-            p_wait_semaphores: wait_semaphores_raw.as_ptr(),
+            wait_semaphore_count: wait_semaphore_count,
+            p_wait_semaphores: p_wait_semaphores,
             p_wait_dst_stage_mask: wait_stages.as_ptr(),
             command_buffer_count: 1,
             p_command_buffers: &self.cmd_buffer,
-            signal_semaphore_count: signal_semaphores_raw.len() as u32,
-            p_signal_semaphores: signal_semaphores_raw.as_ptr(),
+            signal_semaphore_count: signal_semaphore_count,
+            p_signal_semaphores: p_signal_semaphores,
         }];
+
+        let fence = match fence {
+            Some(fence) => *fence.get_fence(),
+            None => vk::Fence::null()
+        };
 
         unsafe {
             self.device.get_device()
                 .queue_submit(
                     self.device.get_graphics_queue(),
                     &submit_infos,
-                    *fence.get_fence(),
+                    fence,
                 )
                 .expect("Failed to execute queue submit.");
         }
@@ -84,12 +106,12 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn begin(&self) {
+    pub fn begin(&self, flags: vk::CommandBufferUsageFlags) {
         let command_buffer_begin_info = vk::CommandBufferBeginInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_BEGIN_INFO,
             p_next: ptr::null(),
             p_inheritance_info: ptr::null(),
-            flags: vk::CommandBufferUsageFlags::SIMULTANEOUS_USE,
+            flags: flags,
         };
 
         unsafe {
@@ -198,6 +220,18 @@ impl VkCmdBuffer {
         }
     }
 
+    pub fn bind_index_buffer(&self, index_buffer: &VkIndexBuffer) {
+        unsafe {
+            self.device.get_device()
+                .cmd_bind_index_buffer(
+                    self.cmd_buffer,
+                    index_buffer.get_buffer(),
+                    0,
+                    vk::IndexType::UINT32
+                );
+        }
+    }
+
     pub fn draw(&self, vertex_count: u32, instance_count: u32, first_vertex: u32, first_instance: u32) {
         unsafe {
             self.device.get_device()
@@ -207,6 +241,52 @@ impl VkCmdBuffer {
                     instance_count,
                     first_vertex,
                     first_instance
+                );
+        }
+    }
+
+    pub fn draw_indexed(&self, index_count: u32, instance_count: u32, first_index: u32, vertex_offset: u32, first_instance: u32) {
+        unsafe {
+            self.device.get_device()
+                .cmd_draw_indexed(
+                    self.cmd_buffer,
+                    index_count,
+                    instance_count,
+                    first_index,
+                    vertex_offset as i32,
+                    first_instance
+                );
+        }
+    }
+
+    pub fn copy_buffers(&self, src_buffer: &VkBuffer, dst_buffer: &VkBuffer) {
+        assert_eq!(src_buffer.get_size(), dst_buffer.get_size(), "Failed to copy buffers.");
+        
+        let copy_regions = [vk::BufferCopy {
+            src_offset: 0,
+            dst_offset: 0,
+            size: src_buffer.get_size(),
+        }];
+
+        unsafe {
+            self.device.get_device()
+                .cmd_copy_buffer(
+                    self.cmd_buffer,
+                    src_buffer.get_buffer(),
+                    dst_buffer.get_buffer(),
+                    &copy_regions
+                );
+        }
+    }
+}
+
+impl Drop for VkCmdBuffer {
+    fn drop(&mut self) {
+        unsafe {
+            self.device.get_device()
+                .free_command_buffers(
+                    self.cmd_pool.get_cmd_pool(),
+                    &[self.cmd_buffer]
                 );
         }
     }
