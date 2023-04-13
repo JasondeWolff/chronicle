@@ -1,5 +1,10 @@
 #![feature(thread_local)]
 
+pub use cgmath::*;
+
+pub mod common;
+pub use common::*;
+
 pub use std::rc::Rc;
 pub use std::cell::{RefCell, Ref, RefMut};
 
@@ -8,7 +13,6 @@ pub use core_loop::CoreLoop;
 
 pub mod graphics;
 pub mod resources;
-pub mod common;
 pub mod system;
 
 use common::Timer;

@@ -3,9 +3,14 @@ use ash::version::DeviceV1_0;
 
 use std::rc::Rc;
 
+use crate::resources::{Model, Resource};
+use crate::common::RcCell;
+use crate::vec_remove_multiple;
+
+pub mod transform;
+pub use transform::*;
 pub mod window;
 pub use window::*;
-
 mod vk_device;
 use vk_device::*;
 mod vk_instance;
@@ -27,6 +32,35 @@ use vk_fence::*;
 mod vk_semaphore;
 use vk_semaphore::*;
 mod utility;
+mod vk_vertex;
+use vk_vertex::*;
+mod buffers;
+use buffers::*;
+mod vk_mesh;
+use vk_mesh::*;
+
+#[derive(Debug, Clone, Copy)]
+pub struct DynamicRenderModelProperties {
+    pub transform: Transform
+}
+
+pub struct DynamicRenderModel {
+    model_resource: Resource<Model>,
+    vk_meshes: Vec<VkMesh>,
+    properties: RcCell<DynamicRenderModelProperties>
+}
+
+impl DynamicRenderModel {
+    pub fn is_active(&self) -> bool {
+        self.properties.strong_count() > 1
+    }
+
+    pub fn draw(&self, cmd_buffer: &VkCmdBuffer) {
+        for mesh in self.vk_meshes.iter() {
+            mesh.draw_cmds(cmd_buffer);
+        }
+    }
+}
 
 pub struct Renderer {
     vk_instance: VkInstance,
@@ -40,7 +74,9 @@ pub struct Renderer {
     pipeline: VkPipeline,
 
     _graphics_cmd_pool: VkCmdPool,
-    graphics_cmd_buffers: Vec<VkCmdBuffer>
+    graphics_cmd_buffers: Vec<VkCmdBuffer>,
+
+    dynamic_models: Vec<DynamicRenderModel>
 }
 
 impl Renderer {
@@ -78,12 +114,25 @@ impl Renderer {
             render_pass: render_pass,
             pipeline: pipeline,
             _graphics_cmd_pool: graphics_cmd_pool,
-            graphics_cmd_buffers: graphics_cmd_buffer
+            graphics_cmd_buffers: graphics_cmd_buffer,
+
+            dynamic_models: Vec::new()
         })
     }
 
     pub(crate) fn update(&mut self) {
+        self.remove_unused_models();
         self.render();
+    }
+
+    fn remove_unused_models(&mut self) {
+        let mut indices_to_remove = Vec::new();
+        for (i, dynamic_model) in self.dynamic_models.iter().enumerate() {
+            if !dynamic_model.is_active() {
+                indices_to_remove.push(i);
+            }
+        }
+        vec_remove_multiple(&mut self.dynamic_models, &mut indices_to_remove);
     }
 
     fn render(&mut self) {
@@ -98,7 +147,9 @@ impl Renderer {
             cmd_buffer.set_viewport(swapchain.get_extent());
             cmd_buffer.begin_render_pass(&self.render_pass, swapchain, img_idx as usize);
             cmd_buffer.bind_graphics_pipeline(&self.pipeline);
-            cmd_buffer.draw(3, 1, 0, 0);
+            for dynamic_model in self.dynamic_models.iter() {
+                dynamic_model.draw(cmd_buffer);
+            }
             cmd_buffer.end_render_pass();
             cmd_buffer.end();
 
@@ -131,5 +182,29 @@ impl Renderer {
             ));
             self.swapchain.as_mut().unwrap().build_framebuffers(&self.render_pass);
         }
+    }
+
+    pub fn create_dynamic_model(&mut self, model_resource: Resource<Model>) -> RcCell<DynamicRenderModelProperties> {
+        let properties = RcCell::new(DynamicRenderModelProperties {
+            transform: Transform::new()
+        });
+
+        let mut meshes = Vec::new();
+        for mesh in model_resource.as_ref().meshes.iter() {
+            meshes.push(VkMesh::new(
+                self.device.clone(),
+                &self.physical_device,
+                &mesh.vertices
+            ));
+        }
+
+        let dynamic_render_model = DynamicRenderModel {
+            model_resource: model_resource,
+            vk_meshes: meshes,
+            properties: properties.clone()
+        };
+        self.dynamic_models.push(dynamic_render_model);
+
+        properties
     }
 }

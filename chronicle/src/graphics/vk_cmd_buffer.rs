@@ -177,23 +177,37 @@ impl VkCmdBuffer {
 
     pub fn bind_graphics_pipeline(&self, pipeline: &VkPipeline) {
         unsafe {
-            self.device.get_device().cmd_bind_pipeline(
-                self.cmd_buffer,
-                vk::PipelineBindPoint::GRAPHICS,
-                *pipeline.get_pipeline(),
-            );
+            self.device.get_device()
+                .cmd_bind_pipeline(
+                    self.cmd_buffer,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    *pipeline.get_pipeline(),
+                );
+        }
+    }
+
+    pub fn bind_vertex_buffer(&self, vertex_buffer: &VkVertexBuffer) {
+        unsafe {
+            self.device.get_device()
+                .cmd_bind_vertex_buffers(
+                    self.cmd_buffer,
+                    0,
+                    &[vertex_buffer.get_buffer()],
+                    &[0_u64]
+                );
         }
     }
 
     pub fn draw(&self, vertex_count: u32, instance_count: u32, first_vertex: u32, first_instance: u32) {
         unsafe {
-            self.device.get_device().cmd_draw(
-                self.cmd_buffer,
-                vertex_count,
-                instance_count,
-                first_vertex,
-                first_instance
-            );
+            self.device.get_device()
+                .cmd_draw(
+                    self.cmd_buffer,
+                    vertex_count,
+                    instance_count,
+                    first_vertex,
+                    first_instance
+                );
         }
     }
 }

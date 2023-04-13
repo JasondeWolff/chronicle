@@ -25,7 +25,8 @@ impl QueueFamilyIndices {
 }
 
 pub struct VkPhysicalDevice {
-    device: vk::PhysicalDevice
+    device: vk::PhysicalDevice,
+    mem_properties: vk::PhysicalDeviceMemoryProperties
 }
 
 pub struct VkLogicalDevice {
@@ -35,8 +36,20 @@ pub struct VkLogicalDevice {
 
 impl VkPhysicalDevice {
     pub fn new(instance: &VkInstance) -> Self {
+        let device = Self::pick_physical_device(
+            instance.get_instance(),
+            instance.get_surface_loader(),
+            *instance.get_surface()
+        );
+
+        let mem_properties = unsafe {
+            instance.get_instance()
+                .get_physical_device_memory_properties(device)
+        };
+
         VkPhysicalDevice {
-            device: Self::pick_physical_device(instance.get_instance(), instance.get_surface_loader(), *instance.get_surface())
+            device: device,
+            mem_properties: mem_properties
         }
     }
 
@@ -169,6 +182,10 @@ impl VkPhysicalDevice {
 
     pub fn get_device(&self) -> vk::PhysicalDevice {
         self.device
+    }
+
+    pub fn get_mem_properties(&self) -> &vk::PhysicalDeviceMemoryProperties {
+        &self.mem_properties
     }
 }
 

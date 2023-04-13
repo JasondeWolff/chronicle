@@ -45,6 +45,7 @@ impl Default for Material {
     }
 }
 
+#[repr(C)]
 #[derive(Clone)]
 pub struct Vertex {
     pub position: Vector3::<f32>,
@@ -58,12 +59,12 @@ pub struct Vertex {
 impl Default for Vertex {
     fn default() -> Self {
         Vertex {
-            position: Vector3::<f32>::new(0.0, 0.0, 0.0),
-            normal: Vector3::<f32>::new(0.0, 0.0, 0.0),
-            tangent: Vector4::<f32>::new(0.0, 0.0, 0.0, 0.0),
-            tex_coord: Vector2::<f32>::new(0.0, 0.0),
-            tex_coord_1: Vector2::<f32>::new(0.0, 0.0),
-            color: Vector4::<f32>::new(0.0, 0.0, 0.0, 0.0)
+            position: Vector3::new(0.0, 0.0, 0.0),
+            normal: Vector3::new(0.0, 0.0, 0.0),
+            tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
+            tex_coord: Vector2::new(0.0, 0.0),
+            tex_coord_1: Vector2::new(0.0, 0.0),
+            color: Vector4::new(0.0, 0.0, 0.0, 0.0)
         }
     }
 }

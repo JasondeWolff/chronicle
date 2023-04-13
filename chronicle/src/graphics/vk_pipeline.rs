@@ -31,14 +31,17 @@ impl VkPipeline {
             shader_modules.push(shader_module);
         }
 
+        let binding_description = VkVertex::get_binding_desc();
+        let attribute_description = VkVertex::get_attribute_desc();
+
         let vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineVertexInputStateCreateFlags::empty(),
-            vertex_attribute_description_count: 0,
-            p_vertex_attribute_descriptions: ptr::null(),
-            vertex_binding_description_count: 0,
-            p_vertex_binding_descriptions: ptr::null(),
+            vertex_attribute_description_count: attribute_description.len() as u32,
+            p_vertex_attribute_descriptions: attribute_description.as_ptr(),
+            vertex_binding_description_count: binding_description.len() as u32,
+            p_vertex_binding_descriptions: binding_description.as_ptr(),
         };
         let vertex_input_assembly_state_info = vk::PipelineInputAssemblyStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
