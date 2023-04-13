@@ -203,7 +203,7 @@ impl VkCmdBuffer {
                 .cmd_bind_pipeline(
                     self.cmd_buffer,
                     vk::PipelineBindPoint::GRAPHICS,
-                    *pipeline.get_pipeline(),
+                    pipeline.get_pipeline(),
                 );
         }
     }
@@ -228,6 +228,20 @@ impl VkCmdBuffer {
                     index_buffer.get_buffer(),
                     0,
                     vk::IndexType::UINT32
+                );
+        }
+    }
+
+    pub fn bind_desc_set(&self, desc_set: &VkDescriptorSet, pipeline: &VkPipeline) {
+        unsafe {
+            self.device.get_device()
+                .cmd_bind_descriptor_sets(
+                    self.cmd_buffer,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    pipeline.get_layout(),
+                    0,
+                    &[desc_set.get_desc_set()],
+                    &[]
                 );
         }
     }

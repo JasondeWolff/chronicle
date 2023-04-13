@@ -55,7 +55,7 @@ impl VkVertexBuffer {
         cmd_pool: Rc<VkCmdPool>,
         vertices: &Vec<Vertex>
     ) -> Self {
-        let vertices = vec![VERTEX_DATA[0].clone(), VERTEX_DATA[1].clone(), VERTEX_DATA[2].clone(), VERTEX_DATA[3].clone()];
+        //let vertices = vec![VERTEX_DATA[0].clone(), VERTEX_DATA[1].clone(), VERTEX_DATA[2].clone(), VERTEX_DATA[3].clone()];
 
         let size = (std::mem::size_of::<Vertex>() * vertices.len()) as u64;
         

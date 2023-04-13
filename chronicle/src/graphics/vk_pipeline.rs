@@ -12,7 +12,12 @@ pub struct VkPipeline {
 }
 
 impl VkPipeline {
-    pub fn new(device: Rc<VkLogicalDevice>, extent: &vk::Extent2D, render_pass: &VkRenderPass, shaders: &Vec<String>) -> Self {
+    pub fn new(
+        device: Rc<VkLogicalDevice>,
+        extent: &vk::Extent2D,
+        render_pass: &VkRenderPass,
+        desc_layouts: &Vec<&VkDescriptorLayout>,
+        shaders: &Vec<String>) -> Self {
         let main_function_name = std::ffi::CString::new("main").unwrap();
 
         let mut shader_modules = Vec::new();
@@ -158,12 +163,17 @@ impl VkPipeline {
             p_dynamic_states: dynamic_state.as_ptr(),
         };
 
+        let mut set_layouts = Vec::new();
+        for desc_layout in desc_layouts {
+            set_layouts.push(desc_layout.get_desc_layout());
+        }
+
         let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo {
             s_type: vk::StructureType::PIPELINE_LAYOUT_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineLayoutCreateFlags::empty(),
-            set_layout_count: 0,
-            p_set_layouts: ptr::null(),
+            set_layout_count: desc_layouts.len() as u32,
+            p_set_layouts: set_layouts.as_ptr(),
             push_constant_range_count: 0,
             p_push_constant_ranges: ptr::null(),
         };
@@ -213,8 +223,12 @@ impl VkPipeline {
         }
     }
 
-    pub fn get_pipeline(&self) -> &vk::Pipeline {
-        &self.pipeline
+    pub fn get_pipeline(&self) -> vk::Pipeline {
+        self.pipeline
+    }
+
+    pub fn get_layout(&self) -> vk::PipelineLayout {
+        self.pipeline_layout
     }
 }
 

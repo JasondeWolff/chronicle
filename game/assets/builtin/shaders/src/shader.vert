@@ -15,7 +15,13 @@ out gl_PerVertex {
     vec4 gl_Position;
 };
 
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+} ubo;
+
 void main() {
-    gl_Position = vec4(inPosition.xy, 0.0, 1.0);
-    fragColor = inColor.xyz;
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition.xyz, 1.0);
+    fragColor = inNormal * 0.5 + 0.5;
 }

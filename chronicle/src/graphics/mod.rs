@@ -40,6 +40,8 @@ mod buffers;
 use buffers::*;
 mod vk_mesh;
 use vk_mesh::*;
+mod descriptors;
+use descriptors::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DynamicRenderModelProperties {
@@ -95,6 +97,10 @@ pub struct Renderer {
     graphics_cmd_pool: Rc<VkCmdPool>,
     graphics_cmd_buffers: Vec<VkCmdBuffer>,
 
+    descriptor_layout: VkDescriptorLayout,
+    descriptor_pool: VkDescriptorPool,
+    descriptor_sets: Vec<VkDescriptorSet>,
+
     dynamic_models: Vec<DynamicRenderModel>,
     ubo: Vec<VkUniformBuffer<UBO>>
 }
@@ -113,10 +119,12 @@ impl Renderer {
             window.width(), window.height()
         );
         let render_pass = VkRenderPass::new(device.clone(), *swapchain.get_format());
+        let descriptor_layout = VkDescriptorLayout::new(device.clone());
         let pipeline = VkPipeline::new(
             device.clone(),
             swapchain.get_extent(),
             &render_pass,
+            &vec![&descriptor_layout],
             &vec![String::from("shader.vert"), String::from("shader.frag")]
         );
         swapchain.build_framebuffers(&render_pass);
@@ -132,6 +140,14 @@ impl Renderer {
             ));
         }
 
+        let mut descriptor_pool = VkDescriptorPool::new(device.clone());
+        let descriptor_sets = VkDescriptorSet::new(
+            device.clone(),
+            &mut descriptor_pool,
+            &descriptor_layout,
+            &ubo
+        );
+
         Box::new(Renderer {
             vk_instance: vk_instance,
             physical_device: physical_device,
@@ -143,6 +159,9 @@ impl Renderer {
             pipeline: pipeline,
             graphics_cmd_pool: graphics_cmd_pool,
             graphics_cmd_buffers: graphics_cmd_buffer,
+            descriptor_layout: descriptor_layout,
+            descriptor_pool: descriptor_pool,
+            descriptor_sets: descriptor_sets,
 
             dynamic_models: Vec::new(),
             ubo: ubo
@@ -172,17 +191,17 @@ impl Renderer {
 
             let time = app().time();
             let UBO = self.ubo[img_idx as usize].data();
-            UBO.model = Matrix4::from_angle_z(Deg(90.0 * time));
+            UBO.model = Matrix4::from_angle_y(Deg(90.0 * time));
             UBO.view = Matrix4::look_at(
-                Point3::new(2.0, 2.0, 2.0),
+                Point3::new(2.0, 0.0, 2.0),
                 Point3::new(0.0, 0.0, 0.0),
-                Vector3::new(0.0, 0.0, 1.0),
+                Vector3::new(0.0, 1.0, 0.0),
             );
             UBO.proj = cgmath::perspective(
-                Deg(45.0),
+                Deg(60.0),
                 app().window().width() as f32 / app().window().height() as f32,
                 0.1,
-                10.0,
+                20.0,
             );
 
             let cmd_buffer = &self.graphics_cmd_buffers[img_idx as usize];
@@ -191,6 +210,7 @@ impl Renderer {
             cmd_buffer.set_viewport(swapchain.get_extent());
             cmd_buffer.begin_render_pass(&self.render_pass, swapchain, img_idx as usize);
             cmd_buffer.bind_graphics_pipeline(&self.pipeline);
+            cmd_buffer.bind_desc_set(&self.descriptor_sets[img_idx as usize], &self.pipeline);
             for dynamic_model in self.dynamic_models.iter() {
                 dynamic_model.draw(cmd_buffer);
             }

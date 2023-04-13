@@ -20,7 +20,7 @@ impl VkIndexBuffer {
         cmd_pool: Rc<VkCmdPool>,
         indices: &Vec<u32>
     ) -> Self {
-        let indices = vec![INDICES_DATA[0].clone(), INDICES_DATA[1].clone(), INDICES_DATA[2].clone(), INDICES_DATA[3].clone(), INDICES_DATA[4].clone(), INDICES_DATA[5].clone()];
+        //let indices = vec![INDICES_DATA[0].clone(), INDICES_DATA[1].clone(), INDICES_DATA[2].clone(), INDICES_DATA[3].clone(), INDICES_DATA[4].clone(), INDICES_DATA[5].clone()];
 
         let size = (std::mem::size_of::<u32>() * indices.len()) as u64;
         

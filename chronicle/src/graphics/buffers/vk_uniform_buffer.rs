@@ -27,6 +27,10 @@ impl<T: Default> VkUniformBuffer<T> {
         }
     }
 
+    pub fn get_buffer(&self) -> vk::Buffer {
+        self.uniform_buffer.get_buffer()
+    }
+
     pub fn data(&mut self) -> &mut T {
         unsafe { self.data.as_mut().unwrap() }
     }
