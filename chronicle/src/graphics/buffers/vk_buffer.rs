@@ -72,7 +72,7 @@ impl VkBuffer {
         }
     }
 
-    fn find_memory_type(
+    pub fn find_memory_type(
         type_filter: u32,
         required_properties: vk::MemoryPropertyFlags,
         mem_properties: vk::PhysicalDeviceMemoryProperties,

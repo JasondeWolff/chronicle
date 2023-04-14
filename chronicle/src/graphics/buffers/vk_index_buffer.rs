@@ -5,11 +5,8 @@ use ash::vk;
 use crate::app;
 use crate::graphics::*;
 
-const INDICES_DATA: [u32; 6] = [0, 1, 2, 2, 3, 0];
-
 pub struct VkIndexBuffer {
     index_buffer: VkBuffer,
-    upload_cmd_buffer: Vec<VkCmdBuffer>,
     index_count: u32
 }
 
@@ -20,8 +17,6 @@ impl VkIndexBuffer {
         cmd_pool: Rc<VkCmdPool>,
         indices: &Vec<u32>
     ) -> Self {
-        //let indices = vec![INDICES_DATA[0].clone(), INDICES_DATA[1].clone(), INDICES_DATA[2].clone(), INDICES_DATA[3].clone(), INDICES_DATA[4].clone(), INDICES_DATA[5].clone()];
-
         let size = (std::mem::size_of::<u32>() * indices.len()) as u64;
         
         let staging_buffer = VkBuffer::new(
@@ -56,7 +51,6 @@ impl VkIndexBuffer {
 
         VkIndexBuffer {
             index_buffer: index_buffer,
-            upload_cmd_buffer: cmd_buffers,
             index_count: indices.len() as u32
         }
     }

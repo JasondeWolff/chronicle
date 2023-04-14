@@ -51,6 +51,7 @@ pub struct DynamicRenderModelProperties {
 pub struct DynamicRenderModel {
     model_resource: Resource<Model>,
     vk_meshes: Vec<VkMesh>,
+    vk_textures: Vec<VkTexture>,
     properties: RcCell<DynamicRenderModelProperties>
 }
 
@@ -264,9 +265,20 @@ impl Renderer {
             ));
         }
 
+        let mut textures = Vec::new();
+        for material in model_resource.as_ref().materials.iter() {
+            textures.push(VkTexture::new(
+                self.device.clone(),
+                &self.physical_device,
+                self.graphics_cmd_pool.clone(),
+                material.as_ref().base_color_texture.clone()
+            ));
+        }
+
         let dynamic_render_model = DynamicRenderModel {
             model_resource: model_resource,
             vk_meshes: meshes,
+            vk_textures: textures,
             properties: properties.clone()
         };
         self.dynamic_models.push(dynamic_render_model);

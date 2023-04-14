@@ -8,45 +8,8 @@ use crate::resources::Vertex;
 
 pub struct VkVertexBuffer {
     vertex_buffer: VkBuffer,
-    upload_cmd_buffer: Vec<VkCmdBuffer>,
     vertex_count: u32
 }
-
-use cgmath::*;
-const VERTEX_DATA: [Vertex; 4] = [
-    Vertex {
-        position: Vector3::new(-0.5, -0.5, 0.0),
-        normal: Vector3::new(0.0, 0.0, 0.0),
-        tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
-        tex_coord: Vector2::new(0.0, 0.0),
-        tex_coord_1: Vector2::new(0.0, 0.0),
-        color: Vector4::new(1.0, 0.0, 0.0, 1.0)
-    },
-    Vertex {
-        position: Vector3::new(0.5, -0.5, 0.0),
-        normal: Vector3::new(0.0, 0.0, 0.0),
-        tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
-        tex_coord: Vector2::new(0.0, 0.0),
-        tex_coord_1: Vector2::new(0.0, 0.0),
-        color: Vector4::new(0.0, 1.0, 0.0, 1.0)
-    },
-    Vertex {
-        position:  Vector3::new(0.5, 0.5, 0.0),
-        normal: Vector3::new(0.0, 0.0, 0.0),
-        tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
-        tex_coord: Vector2::new(0.0, 0.0),
-        tex_coord_1: Vector2::new(0.0, 0.0),
-        color: Vector4::new(0.0, 0.0, 1.0, 1.0)
-    },
-    Vertex {
-        position:  Vector3::new(-0.5, 0.5, 0.0),
-        normal: Vector3::new(0.0, 0.0, 0.0),
-        tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
-        tex_coord: Vector2::new(0.0, 0.0),
-        tex_coord_1: Vector2::new(0.0, 0.0),
-        color: Vector4::new(1.0, 1.0, 1.0, 1.0)
-    }
-];
 
 impl VkVertexBuffer {
     pub fn new(
@@ -55,8 +18,6 @@ impl VkVertexBuffer {
         cmd_pool: Rc<VkCmdPool>,
         vertices: &Vec<Vertex>
     ) -> Self {
-        //let vertices = vec![VERTEX_DATA[0].clone(), VERTEX_DATA[1].clone(), VERTEX_DATA[2].clone(), VERTEX_DATA[3].clone()];
-
         let size = (std::mem::size_of::<Vertex>() * vertices.len()) as u64;
         
         let staging_buffer = VkBuffer::new(
@@ -91,7 +52,6 @@ impl VkVertexBuffer {
 
         VkVertexBuffer {
             vertex_buffer: vertex_buffer,
-            upload_cmd_buffer: cmd_buffers,
             vertex_count: vertices.len() as u32
         }
     }

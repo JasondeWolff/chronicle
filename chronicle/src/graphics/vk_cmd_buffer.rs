@@ -292,6 +292,98 @@ impl VkCmdBuffer {
                 );
         }
     }
+
+    pub fn copy_buffer_to_image(&self, src_buffer: &VkBuffer, dst_image: &VkImage) {
+        let buffer_image_regions = [vk::BufferImageCopy {
+            image_subresource: vk::ImageSubresourceLayers {
+                aspect_mask: vk::ImageAspectFlags::COLOR,
+                mip_level: 0,
+                base_array_layer: 0,
+                layer_count: 1,
+            },
+            image_extent: vk::Extent3D {
+                width: dst_image.width(),
+                height: dst_image.height(),
+                depth: 1,
+            },
+            buffer_offset: 0,
+            buffer_image_height: 0,
+            buffer_row_length: 0,
+            image_offset: vk::Offset3D { x: 0, y: 0, z: 0 },
+        }];
+
+        unsafe {
+            self.device.get_device()
+                .cmd_copy_buffer_to_image(
+                    self.cmd_buffer,
+                    src_buffer.get_buffer(),
+                    dst_image.get_image(),
+                    vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    &buffer_image_regions,
+                );
+        }
+    }
+
+    pub fn transition_image_layout(&self,
+        image: &VkImage,
+        old_layout: vk::ImageLayout,
+        new_layout: vk::ImageLayout
+    ) {
+        let src_access_mask;
+        let dst_access_mask;
+        let source_stage;
+        let destination_stage;
+
+        if old_layout == vk::ImageLayout::UNDEFINED
+            && new_layout == vk::ImageLayout::TRANSFER_DST_OPTIMAL
+        {
+            src_access_mask = vk::AccessFlags::empty();
+            dst_access_mask = vk::AccessFlags::TRANSFER_WRITE;
+            source_stage = vk::PipelineStageFlags::TOP_OF_PIPE;
+            destination_stage = vk::PipelineStageFlags::TRANSFER;
+        } else if old_layout == vk::ImageLayout::TRANSFER_DST_OPTIMAL
+            && new_layout == vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
+        {
+            src_access_mask = vk::AccessFlags::TRANSFER_WRITE;
+            dst_access_mask = vk::AccessFlags::SHADER_READ;
+            source_stage = vk::PipelineStageFlags::TRANSFER;
+            destination_stage = vk::PipelineStageFlags::FRAGMENT_SHADER;
+        } else {
+            panic!("Unsupported layout transition!")
+        }
+
+        let image_barriers = [vk::ImageMemoryBarrier {
+            s_type: vk::StructureType::IMAGE_MEMORY_BARRIER,
+            p_next: ptr::null(),
+            src_access_mask,
+            dst_access_mask,
+            old_layout,
+            new_layout,
+            src_queue_family_index: vk::QUEUE_FAMILY_IGNORED,
+            dst_queue_family_index: vk::QUEUE_FAMILY_IGNORED,
+            image: image.get_image(),
+            subresource_range: vk::ImageSubresourceRange {
+                aspect_mask: vk::ImageAspectFlags::COLOR,
+                base_mip_level: 0,
+                level_count: 1,
+                base_array_layer: 0,
+                layer_count: 1,
+            },
+        }];
+
+        unsafe {
+            self.device.get_device()
+                .cmd_pipeline_barrier(
+                    self.cmd_buffer,
+                    source_stage,
+                    destination_stage,
+                    vk::DependencyFlags::empty(),
+                    &[],
+                    &[],
+                    &image_barriers,
+                );
+        }
+    }
 }
 
 impl Drop for VkCmdBuffer {

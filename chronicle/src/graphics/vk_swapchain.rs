@@ -100,7 +100,7 @@ impl VkSwapchain {
                 .expect("Failed to get Swapchain Images.")
         };
         let swapchain_imageviews = Self::create_image_views(
-            &device.get_device(),
+            device.clone(),
             surface_format.format,
             &swapchain_images,
         );
@@ -203,41 +203,18 @@ impl VkSwapchain {
     }
 
     fn create_image_views(
-        device: &ash::Device,
+        device: Rc<VkLogicalDevice>,
         surface_format: vk::Format,
         images: &Vec<vk::Image>,
     ) -> Vec<vk::ImageView> {
         let mut swapchain_imageviews = vec![];
 
         for &image in images.iter() {
-            let imageview_create_info = vk::ImageViewCreateInfo {
-                s_type: vk::StructureType::IMAGE_VIEW_CREATE_INFO,
-                p_next: std::ptr::null(),
-                flags: vk::ImageViewCreateFlags::empty(),
-                view_type: vk::ImageViewType::TYPE_2D,
-                format: surface_format,
-                components: vk::ComponentMapping {
-                    r: vk::ComponentSwizzle::IDENTITY,
-                    g: vk::ComponentSwizzle::IDENTITY,
-                    b: vk::ComponentSwizzle::IDENTITY,
-                    a: vk::ComponentSwizzle::IDENTITY,
-                },
-                subresource_range: vk::ImageSubresourceRange {
-                    aspect_mask: vk::ImageAspectFlags::COLOR,
-                    base_mip_level: 0,
-                    level_count: 1,
-                    base_array_layer: 0,
-                    layer_count: 1,
-                },
+            swapchain_imageviews.push(VkImage::create_image_view(
+                device.clone(),
                 image,
-            };
-
-            let imageview = unsafe {
-                device
-                    .create_image_view(&imageview_create_info, None)
-                    .expect("Failed to create Image View.")
-            };
-            swapchain_imageviews.push(imageview);
+                surface_format
+            ));
         }
 
         swapchain_imageviews

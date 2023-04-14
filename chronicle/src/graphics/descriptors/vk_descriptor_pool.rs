@@ -32,7 +32,7 @@ impl VkDescriptorPool {
     fn create_desc_pool(&self, desc_type: vk::DescriptorType) -> vk::DescriptorPool {
         let pool_sizes = [vk::DescriptorPoolSize {
             ty: vk::DescriptorType::UNIFORM_BUFFER,
-            descriptor_count: 3 as u32,
+            descriptor_count: 64 as u32,
         }];
 
         let descriptor_pool_create_info = vk::DescriptorPoolCreateInfo {
