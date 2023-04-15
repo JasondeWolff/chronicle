@@ -84,7 +84,7 @@ impl VkPhysicalDevice {
         surface_loader: &ash::extensions::khr::Surface,
         surface: vk::SurfaceKHR
     ) -> bool {
-        let _device_features = unsafe { instance.get_physical_device_features(physical_device) };
+        let device_features = unsafe { instance.get_physical_device_features(physical_device) };
         let device_properties = unsafe { instance.get_physical_device_properties(physical_device) };
         if device_properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU {
             return false;
@@ -104,7 +104,8 @@ impl VkPhysicalDevice {
 
         return is_queue_family_supported
             && is_device_extension_supported
-            && is_swapchain_supported;
+            && is_swapchain_supported
+            && device_features.sampler_anisotropy > 0;
     }
 
     fn check_device_extension_support(
@@ -216,6 +217,7 @@ impl VkLogicalDevice {
         }
 
         let physical_device_features = vk::PhysicalDeviceFeatures {
+            sampler_anisotropy: vk::TRUE,
             ..Default::default()
         };
 

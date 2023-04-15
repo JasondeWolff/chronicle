@@ -11,30 +11,13 @@ pub struct VkDescriptorLayout {
 }
 
 impl VkDescriptorLayout {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Self {
-        let ubo_layout_bindings = [
-            vk::DescriptorSetLayoutBinding {
-                binding: 0,
-                descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
-                descriptor_count: 1,
-                stage_flags: vk::ShaderStageFlags::VERTEX,
-                p_immutable_samplers: std::ptr::null(),
-            },
-            // vk::DescriptorSetLayoutBinding {
-            //     binding: 1,
-            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
-            //     descriptor_count: 1,
-            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
-            //     p_immutable_samplers: std::ptr::null(),
-            // },
-        ];
-
+    pub fn new(device: Rc<VkLogicalDevice>, desc_layout_bindings: &Vec<vk::DescriptorSetLayoutBinding>) -> Self {
         let ubo_layout_create_info = vk::DescriptorSetLayoutCreateInfo {
             s_type: vk::StructureType::DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             p_next: std::ptr::null(),
             flags: vk::DescriptorSetLayoutCreateFlags::empty(),
-            binding_count: ubo_layout_bindings.len() as u32,
-            p_bindings: ubo_layout_bindings.as_ptr(),
+            binding_count: desc_layout_bindings.len() as u32,
+            p_bindings: desc_layout_bindings.as_ptr(),
         };
 
         let desc_layout = unsafe {

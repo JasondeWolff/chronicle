@@ -69,7 +69,7 @@ pub struct Renderer {
 
     dynamic_models: Vec<DynamicRenderModel>,
     ubo: Vec<VkUniformBuffer<UBO>>,
-    //sampler: VkSampler
+    sampler: VkSampler
 }
 
 impl Renderer {
@@ -81,7 +81,22 @@ impl Renderer {
         let swapchain = swapchain.as_ref();
 
         let render_pass = swapchain.get_render_pass();
-        let descriptor_layout = VkDescriptorLayout::new(device.clone());
+        let descriptor_layout = VkDescriptorLayout::new(device.clone(), &vec![
+            vk::DescriptorSetLayoutBinding {
+                binding: 0,
+                descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+                descriptor_count: 1,
+                stage_flags: vk::ShaderStageFlags::VERTEX,
+                p_immutable_samplers: std::ptr::null(),
+            },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 1,
+            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
+        ]);
         let pipeline = VkPipeline::new(
             device.clone(),
             swapchain.get_extent(),
@@ -107,7 +122,7 @@ impl Renderer {
             
         );
 
-        //let sampler = VkSampler::new(device.clone());
+        let sampler = VkSampler::new(device.clone());
 
         Box::new(Renderer {
             app: RcCell::new(app),
@@ -119,11 +134,13 @@ impl Renderer {
 
             dynamic_models: Vec::new(),
             ubo: ubo,
-            //sampler: sampler
+            sampler: sampler
         })
     }
 
     pub(crate) fn update(&mut self) {
+        self.app.as_mut().update();
+
         self.remove_unused_models();
         self.render();
     }

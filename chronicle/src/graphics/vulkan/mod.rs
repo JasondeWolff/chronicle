@@ -67,7 +67,7 @@ impl VkApp {
             VkQueueType::PRESENT
         );
 
-        let mut swapchain = VkSwapchain::new(
+        let swapchain = VkSwapchain::new(
             &vk_instance,
             device.clone(), &physical_device,
             window.width(), window.height()
