@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::ptr;
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 
 use crate::graphics::*;
@@ -12,11 +11,17 @@ pub struct VkFence {
 }
 
 impl VkFence {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
+    pub fn new(device: Rc<VkLogicalDevice>, signaled: bool) -> Rc<Self> {
+        let create_flags = if signaled {
+            vk::FenceCreateFlags::SIGNALED
+        } else {
+            vk::FenceCreateFlags::default()
+        };
+
         let fence_create_info = vk::FenceCreateInfo {
             s_type: vk::StructureType::FENCE_CREATE_INFO,
             p_next: ptr::null(),
-            flags: vk::FenceCreateFlags::SIGNALED,
+            flags: create_flags
         };
 
         let fence = unsafe { device.get_device()
@@ -30,8 +35,16 @@ impl VkFence {
         })
     }
 
-    pub fn get_fence(&self) -> &vk::Fence {
-        &self.fence
+    pub fn get_fence(&self) -> vk::Fence {
+        self.fence
+    }
+
+    pub fn is_completed(&self) -> bool {
+        unsafe {
+            self.device.get_device()
+                .get_fence_status(self.fence)
+                .expect("Failed to get Fence status.")
+        }
     }
 
     pub fn wait(&self) {

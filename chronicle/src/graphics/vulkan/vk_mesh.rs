@@ -8,15 +8,13 @@ pub struct VkMesh {
 
 impl VkMesh {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        physical_device: &VkPhysicalDevice,
-        cmd_pool: Rc<VkCmdPool>,
+        app: RcCell<VkApp>,
         vertices: &Vec<Vertex>,
         indices: &Vec<u32>
     ) -> Self {
         VkMesh {
-            vertex_buffer: VkVertexBuffer::new(device.clone(), physical_device, cmd_pool.clone(), vertices),
-            index_buffer: VkIndexBuffer::new(device, physical_device, cmd_pool, indices)
+            vertex_buffer: VkVertexBuffer::new(app.clone(), vertices),
+            index_buffer: VkIndexBuffer::new(app, indices)
         }
     }
 

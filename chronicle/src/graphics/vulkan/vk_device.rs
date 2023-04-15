@@ -1,5 +1,4 @@
-use ash::version::DeviceV1_0;
-use ash::{vk, version::InstanceV1_0};
+use ash::vk;
 
 use crate::graphics::*;
 use utility::constants::VALIDATION;
@@ -165,6 +164,7 @@ impl VkPhysicalDevice {
                         index as u32,
                         surface,
                     )
+                    .expect("Failed to get surface support.")
             };
             if queue_family.queue_count > 0 && is_present_support {
                 queue_family_indices.present_family = Some(index);
@@ -272,6 +272,14 @@ impl VkLogicalDevice {
 
     pub fn get_present_queue(&self) -> vk::Queue {
         unsafe { self.device.get_device_queue(self.queue_indices.present_family.unwrap(), 0) }
+    }
+
+    pub fn wait_idle(&self) {
+        unsafe {
+            self.device
+                .device_wait_idle()
+                .expect("Failed to wait device idle.")
+        };
     }
 
     pub fn get_device(&self) -> &ash::Device {

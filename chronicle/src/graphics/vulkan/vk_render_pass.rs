@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::ptr;
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 
 use crate::graphics::*;
@@ -12,7 +11,7 @@ pub struct VkRenderPass {
 }
 
 impl VkRenderPass {
-    pub fn new(device: Rc<VkLogicalDevice>, format: vk::Format) -> Self {
+    pub fn new(device: Rc<VkLogicalDevice>, format: vk::Format) -> Rc<Self> {
         let color_attachment = vk::AttachmentDescription {
             flags: vk::AttachmentDescriptionFlags::empty(),
             format: format,
@@ -63,14 +62,14 @@ impl VkRenderPass {
                 .expect("Failed to create Render Pass.")
         };
 
-        VkRenderPass {
+        Rc::new(VkRenderPass {
             device: device,
             render_pass: render_pass
-        }
+        })
     }
 
-    pub fn get_render_pass(&self) -> &vk::RenderPass {
-        &self.render_pass
+    pub fn get_render_pass(&self) -> vk::RenderPass {
+        self.render_pass
     }
 }
 

@@ -1,8 +1,6 @@
 use std::rc::Rc;
 use std::ptr;
 
-use ash::version::DeviceV1_0;
-
 use crate::graphics::*;
 
 pub struct VkPipeline {
@@ -134,7 +132,7 @@ impl VkPipeline {
 
         let color_blend_attachment_states = [vk::PipelineColorBlendAttachmentState {
             blend_enable: vk::FALSE,
-            color_write_mask: vk::ColorComponentFlags::all(),
+            color_write_mask: vk::ColorComponentFlags::RGBA,
             src_color_blend_factor: vk::BlendFactor::ONE,
             dst_color_blend_factor: vk::BlendFactor::ZERO,
             color_blend_op: vk::BlendOp::ADD,
@@ -200,7 +198,7 @@ impl VkPipeline {
             p_color_blend_state: &color_blend_state,
             p_dynamic_state: &dynamic_state_info,
             layout: pipeline_layout,
-            render_pass: *render_pass.get_render_pass(),
+            render_pass: render_pass.get_render_pass(),
             subpass: 0,
             base_pipeline_handle: vk::Pipeline::null(),
             base_pipeline_index: -1,

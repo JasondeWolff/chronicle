@@ -12,13 +12,22 @@ pub struct VkDescriptorLayout {
 
 impl VkDescriptorLayout {
     pub fn new(device: Rc<VkLogicalDevice>) -> Self {
-        let ubo_layout_bindings = [vk::DescriptorSetLayoutBinding {
-            binding: 0,
-            descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
-            descriptor_count: 1,
-            stage_flags: vk::ShaderStageFlags::VERTEX,
-            p_immutable_samplers: std::ptr::null(),
-        }];
+        let ubo_layout_bindings = [
+            vk::DescriptorSetLayoutBinding {
+                binding: 0,
+                descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+                descriptor_count: 1,
+                stage_flags: vk::ShaderStageFlags::VERTEX,
+                p_immutable_samplers: std::ptr::null(),
+            },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 1,
+            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
+        ];
 
         let ubo_layout_create_info = vk::DescriptorSetLayoutCreateInfo {
             s_type: vk::StructureType::DESCRIPTOR_SET_LAYOUT_CREATE_INFO,

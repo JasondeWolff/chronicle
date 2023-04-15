@@ -1,8 +1,4 @@
-use std::rc::Rc;
-
 use ash::vk;
-
-use crate::app;
 use crate::graphics::*;
 use crate::resources::Vertex;
 
@@ -13,19 +9,18 @@ pub struct VkVertexBuffer {
 
 impl VkVertexBuffer {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        physical_device: &VkPhysicalDevice,
-        cmd_pool: Rc<VkCmdPool>,
+        app: RcCell<VkApp>,
         vertices: &Vec<Vertex>
     ) -> Self {
+        let mut app = app.as_mut();
         let size = (std::mem::size_of::<Vertex>() * vertices.len()) as u64;
         
         let staging_buffer = VkBuffer::new(
-            device.clone(),
+            app.get_device().clone(),
             size,
             vk::BufferUsageFlags::TRANSFER_SRC,
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-            physical_device.get_mem_properties()
+            app.get_physical_device().get_mem_properties()
         );
 
         unsafe {
@@ -35,20 +30,22 @@ impl VkVertexBuffer {
         }
 
         let vertex_buffer = VkBuffer::new(
-            device.clone(),
+            app.get_device().clone(),
             size,
             vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
-            physical_device.get_mem_properties()
+            app.get_physical_device().get_mem_properties()
         );
 
-        let cmd_buffers = VkCmdBuffer::new(device, cmd_pool, 1);
-        let cmd_buffer = &cmd_buffers[0];
-        cmd_buffer.begin(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
-        cmd_buffer.copy_buffers(&staging_buffer, &vertex_buffer);
-        cmd_buffer.end();
-        cmd_buffer.submit(None, None, None);
-        app().graphics().wait_idle();
+        let cmd_queue = app.get_cmd_queue();
+        let cmd_buffer = cmd_queue.get_cmd_buffer(); {
+            let cmd_buffer_ref = cmd_buffer.as_ref();
+            cmd_buffer_ref.begin(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
+            cmd_buffer_ref.copy_buffers(&staging_buffer, &vertex_buffer);
+            cmd_buffer_ref.end();
+        }
+        cmd_queue.submit_cmd_buffer(cmd_buffer, None, None);
+        app.get_device().wait_idle();
 
         VkVertexBuffer {
             vertex_buffer: vertex_buffer,

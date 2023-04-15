@@ -2,9 +2,7 @@ use std::rc::Rc;
 
 use ash::vk;
 
-use crate::app;
 use crate::graphics::*;
-use crate::resources::Texture;
 
 pub struct VkImage {
     device: Rc<VkLogicalDevice>,
@@ -157,6 +155,11 @@ impl Drop for VkImage {
         unsafe {
             self.device.get_device()
                 .free_memory(self.memory, None);
+
+            if let Some(image_view) = self.image_view {
+                self.device.get_device()
+                    .destroy_image_view(image_view, None);
+            }
 
             self.device.get_device()
                 .destroy_image(self.image, None);

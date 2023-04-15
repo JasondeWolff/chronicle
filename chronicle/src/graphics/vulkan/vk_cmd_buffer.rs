@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::ptr;
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 
 use crate::graphics::*;
@@ -13,11 +12,11 @@ pub struct VkCmdBuffer {
 }
 
 impl VkCmdBuffer {
-    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: Rc<VkCmdPool>, count: u32) -> Vec<Self> {
+    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: Rc<VkCmdPool>) -> Self {
         let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             p_next: ptr::null(),
-            command_buffer_count: count,
+            command_buffer_count: 1,
             command_pool: cmd_pool.get_cmd_pool(),
             level: vk::CommandBufferLevel::PRIMARY,
         };
@@ -28,72 +27,72 @@ impl VkCmdBuffer {
                 .expect("Failed to allocate Command Buffers.")
         };
 
-        let mut cmd_buffers = Vec::new();
-        for command_buffer in command_buffers {
-            cmd_buffers.push(VkCmdBuffer {
-                device: device.clone(),
-                cmd_pool: cmd_pool.clone(),
-                cmd_buffer: command_buffer
-            });
+        VkCmdBuffer {
+            device: device.clone(),
+            cmd_pool: cmd_pool.clone(),
+            cmd_buffer: command_buffers[0]
         }
-        cmd_buffers
     }
 
-    pub fn submit(&self, wait_semaphores: Option<&Vec<&VkSemaphore>>, signal_semaphores: Option<&Vec<&VkSemaphore>>, fence: Option<&VkFence>) {
-        let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
+    pub fn get_cmd_buffer(&self) -> vk::CommandBuffer {
+        self.cmd_buffer
+    }
 
-        let mut wait_semaphores_raw = Vec::new();
-        let mut signal_semaphores_raw = Vec::new();
+    // pub fn submit(&self, wait_semaphores: Option<&Vec<&VkSemaphore>>, signal_semaphores: Option<&Vec<&VkSemaphore>>, fence: Option<&VkFence>) {
+    //     let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
-        let (wait_semaphore_count, p_wait_semaphores) = match wait_semaphores {
-            Some(wait_semaphores) => {
-                for wait_semaphore in wait_semaphores {
-                    wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
-                }
+    //     let mut wait_semaphores_raw = Vec::new();
+    //     let mut signal_semaphores_raw = Vec::new();
 
-                (wait_semaphores.len() as u32, wait_semaphores_raw.as_ptr())
-            },
-            None => (0, ptr::null())
-        };
+    //     let (wait_semaphore_count, p_wait_semaphores) = match wait_semaphores {
+    //         Some(wait_semaphores) => {
+    //             for wait_semaphore in wait_semaphores {
+    //                 wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
+    //             }
 
-        let (signal_semaphore_count, p_signal_semaphores) = match signal_semaphores {
-            Some(signal_semaphores) => {
-                for signal_semaphore in signal_semaphores {
-                    signal_semaphores_raw.push(*signal_semaphore.get_semaphore());
-                }
+    //             (wait_semaphores.len() as u32, wait_semaphores_raw.as_ptr())
+    //         },
+    //         None => (0, ptr::null())
+    //     };
 
-                (signal_semaphores.len() as u32, signal_semaphores_raw.as_ptr())
-            },
-            None => (0, ptr::null())
-        };
+    //     let (signal_semaphore_count, p_signal_semaphores) = match signal_semaphores {
+    //         Some(signal_semaphores) => {
+    //             for signal_semaphore in signal_semaphores {
+    //                 signal_semaphores_raw.push(*signal_semaphore.get_semaphore());
+    //             }
+
+    //             (signal_semaphores.len() as u32, signal_semaphores_raw.as_ptr())
+    //         },
+    //         None => (0, ptr::null())
+    //     };
         
-        let submit_infos = [vk::SubmitInfo {
-            s_type: vk::StructureType::SUBMIT_INFO,
-            p_next: ptr::null(),
-            wait_semaphore_count: wait_semaphore_count,
-            p_wait_semaphores: p_wait_semaphores,
-            p_wait_dst_stage_mask: wait_stages.as_ptr(),
-            command_buffer_count: 1,
-            p_command_buffers: &self.cmd_buffer,
-            signal_semaphore_count: signal_semaphore_count,
-            p_signal_semaphores: p_signal_semaphores,
-        }];
+    //     let submit_infos = [vk::SubmitInfo {
+    //         s_type: vk::StructureType::SUBMIT_INFO,
+    //         p_next: ptr::null(),
+    //         wait_semaphore_count: wait_semaphore_count,
+    //         p_wait_semaphores: p_wait_semaphores,
+    //         p_wait_dst_stage_mask: wait_stages.as_ptr(),
+    //         command_buffer_count: 1,
+    //         p_command_buffers: &self.cmd_buffer,
+    //         signal_semaphore_count: signal_semaphore_count,
+    //         p_signal_semaphores: p_signal_semaphores,
+    //     }];
 
-        let fence = match fence {
-            Some(fence) => *fence.get_fence(),
-            None => vk::Fence::null()
-        };
+    //     let fence = match fence {
+    //         Some(fence) => fence.get_fence(),
+    //         None => vk::Fence::null()
+    //     };
 
-        unsafe {
-            self.device.get_device()
-                .queue_submit(
-                    self.device.get_graphics_queue(),
-                    &submit_infos,
-                    fence,
-                )
-                .expect("Failed to execute queue submit.");
-        }
-    }
+    //     unsafe {
+    //         self.device.get_device()
+    //             .queue_submit(
+    //                 self.device.get_graphics_queue(),
+    //                 &submit_infos,
+    //                 fence,
+    //             )
+    //             .expect("Failed to execute queue submit.");
+    //     }
+    // }
 
     pub fn reset(&self) {
         unsafe {
@@ -171,7 +170,7 @@ impl VkCmdBuffer {
         let render_pass_begin_info = vk::RenderPassBeginInfo {
             s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
             p_next: ptr::null(),
-            render_pass: *render_pass.get_render_pass(),
+            render_pass: render_pass.get_render_pass(),
             framebuffer: *swapchain.get_framebuffer(frame_idx),
             render_area: vk::Rect2D {
                 offset: vk::Offset2D { x: 0, y: 0 },

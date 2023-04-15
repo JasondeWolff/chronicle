@@ -1,7 +1,5 @@
 use std::rc::Rc;
 
-use ash::version::DeviceV1_0;
-
 use crate::graphics::*;
 use crate::app;
 

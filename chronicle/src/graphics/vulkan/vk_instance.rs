@@ -1,5 +1,4 @@
-use ash::version::EntryV1_0;
-use ash::{vk, version::InstanceV1_0};
+use ash::vk;
 
 use crate::graphics::*;
 use utility::constants::{ENGINE_TITLE, ENGINE_VERSION, APPLICATION_VERSION, API_VERSION, VALIDATION};
@@ -19,7 +18,7 @@ pub struct VkInstance {
 
 impl VkInstance {
     pub fn new(title: &'static str, window: &Window) -> VkInstance {
-        let entry = ash::Entry::new().unwrap();
+        let entry = unsafe { ash::Entry::load().unwrap() };
         let instance = Self::create_instance(&entry, title);
         let (debug_utils_loader, debug_messenger) = utility::debug::setup_debug_utils(true, &entry, &instance);
         let surface = unsafe { utility::platforms::create_surface(&entry, &instance, &window.get_winit_window()).expect("Failed to create a surface.") };

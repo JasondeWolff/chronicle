@@ -1,8 +1,5 @@
-use std::rc::Rc;
-
 use ash::vk;
 
-use crate::app;
 use crate::graphics::*;
 use crate::resources::Texture;
 
@@ -12,11 +9,11 @@ pub struct VkTexture {
 
 impl VkTexture {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        physical_device: &VkPhysicalDevice,
-        cmd_pool: Rc<VkCmdPool>,
+        app: RcCell<VkApp>,
         texture_resource: Resource<Texture>
     ) -> Self {
+        let mut app = app.as_mut();
+
         let (image_width, image_height, channel_count) = (texture_resource.as_ref().width, texture_resource.as_ref().height, texture_resource.as_ref().channel_count);
         assert_eq!(channel_count, 3, "Failed to create new image.");
         
@@ -24,11 +21,11 @@ impl VkTexture {
         let image_data = &texture_resource.as_ref().data;
 
         let staging_buffer = VkBuffer::new(
-            device.clone(),
+            app.get_device().clone(),
             image_size,
             vk::BufferUsageFlags::TRANSFER_SRC,
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-            physical_device.get_mem_properties()
+            app.get_physical_device().get_mem_properties()
         );
 
         unsafe {
@@ -38,35 +35,41 @@ impl VkTexture {
         }
 
         let image = VkImage::new(
-            device.clone(),
+            app.get_device().clone(),
             image_width, image_height,
             vk::Format::R8G8B8A8_UNORM,
             vk::ImageTiling::OPTIMAL,
             vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
-            physical_device.get_mem_properties(),
+            app.get_physical_device().get_mem_properties(),
         );
 
-        let cmd_buffers = VkCmdBuffer::new(device, cmd_pool, 1);
-        let cmd_buffer = &cmd_buffers[0];
-        cmd_buffer.begin(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT); {
-            cmd_buffer.transition_image_layout(
+        let cmd_queue = app.get_cmd_queue();
+        let cmd_buffer = cmd_queue.get_cmd_buffer(); {
+            let cmd_buffer_ref = cmd_buffer.as_ref();
+            cmd_buffer_ref.begin(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
+            cmd_buffer_ref.transition_image_layout(
                 &image,
                 vk::ImageLayout::UNDEFINED,
                 vk::ImageLayout::TRANSFER_DST_OPTIMAL
             );
-            cmd_buffer.copy_buffer_to_image(&staging_buffer, &image);
-            cmd_buffer.transition_image_layout(
+            cmd_buffer_ref.copy_buffer_to_image(&staging_buffer, &image);
+            cmd_buffer_ref.transition_image_layout(
                 &image,
                 vk::ImageLayout::TRANSFER_DST_OPTIMAL,
                 vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
             );
-        } cmd_buffer.end();
-        cmd_buffer.submit(None, None, None);
-        app().graphics().wait_idle();
+            cmd_buffer_ref.end();
+        }
+        cmd_queue.submit_cmd_buffer(cmd_buffer, None, None);
+        app.get_device().wait_idle();
 
         VkTexture {
             image: image
         }
+    }
+
+    pub fn get_image(&self) -> &VkImage {
+        &self.image
     }
 }
