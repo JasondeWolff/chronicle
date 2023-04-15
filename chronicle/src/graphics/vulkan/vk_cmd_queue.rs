@@ -12,6 +12,7 @@ struct InFlightCmdBuffer {
 
 pub struct VkCmdQueue {
     device: Rc<VkLogicalDevice>,
+    desc_pool: Rc<VkDescriptorPool>,
     queue: vk::Queue,
     cmd_pool: Rc<VkCmdPool>,
     queue_type: VkQueueType,
@@ -28,6 +29,7 @@ pub enum VkQueueType {
 impl VkCmdQueue {
     pub fn new(
         device: Rc<VkLogicalDevice>,
+        desc_pool: Rc<VkDescriptorPool>,
         queue: vk::Queue,
         queue_type: VkQueueType
     ) -> Self {
@@ -35,6 +37,7 @@ impl VkCmdQueue {
 
         VkCmdQueue {
             device: device,
+            desc_pool: desc_pool,
             queue: queue,
             cmd_pool: cmd_pool,
             queue_type: queue_type,
@@ -54,6 +57,7 @@ impl VkCmdQueue {
                 RcCell::new(VkCmdBuffer::new(
                     self.device.clone(),
                     self.cmd_pool.clone(),
+                    self.desc_pool.clone()
                 ))
             }
         }

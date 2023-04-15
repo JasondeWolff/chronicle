@@ -61,14 +61,11 @@ pub struct Renderer {
     app: RcCell<VkApp>,
 
     render_pass: Rc<VkRenderPass>,
-    pipeline: VkPipeline,
+    pipeline: Rc<VkPipeline>,
 
-    descriptor_layout: VkDescriptorLayout,
-    descriptor_pool: VkDescriptorPool,
-    descriptor_sets: Vec<VkDescriptorSet>,
+    descriptor_layout: Rc<VkDescriptorSetLayout>,
 
     dynamic_models: Vec<DynamicRenderModel>,
-    ubo: Vec<VkUniformBuffer<UBO>>,
     sampler: VkSampler
 }
 
@@ -81,7 +78,7 @@ impl Renderer {
         let swapchain = swapchain.as_ref();
 
         let render_pass = swapchain.get_render_pass();
-        let descriptor_layout = VkDescriptorLayout::new(device.clone(), &vec![
+        let descriptor_layout = VkDescriptorSetLayout::new(device.clone(), &vec![
             vk::DescriptorSetLayoutBinding {
                 binding: 0,
                 descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
@@ -105,23 +102,6 @@ impl Renderer {
             &vec![String::from("shader.vert"), String::from("shader.frag")]
         );
 
-        let mut ubo = Vec::new();
-        for _ in 0..swapchain.get_framebuffer_count() {
-            ubo.push(VkUniformBuffer::new(
-                device.clone(),
-                &physical_device
-            ));
-        }
-
-        let mut descriptor_pool = VkDescriptorPool::new(device.clone());
-        let descriptor_sets = VkDescriptorSet::new(
-            device.clone(),
-            &mut descriptor_pool,
-            &descriptor_layout,
-            &ubo,
-            
-        );
-
         let sampler = VkSampler::new(device.clone());
 
         Box::new(Renderer {
@@ -129,11 +109,8 @@ impl Renderer {
             render_pass: render_pass,
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
-            descriptor_pool: descriptor_pool,
-            descriptor_sets: descriptor_sets,
 
             dynamic_models: Vec::new(),
-            ubo: ubo,
             sampler: sampler
         })
     }
@@ -163,9 +140,9 @@ impl Renderer {
             let img_available = swapchain.image_available_semaphore();
             let render_finished = swapchain.render_finished_semaphore();
 
-            let time = crate::app().time();
-            let ubo = self.ubo[img_idx as usize].data();
-            ubo.model = Matrix4::from_angle_y(Deg(90.0 * time));
+            let mut uniform_buffer = VkUniformBuffer::<UBO>::new(app.get_device(), app.get_physical_device());
+            let ubo = uniform_buffer.data();
+            ubo.model = Matrix4::from_angle_y(Deg(90.0 * crate::app().time()));
             ubo.view = Matrix4::look_at(
                 Point3::new(2.0, 0.0, 2.0),
                 Point3::new(0.0, 0.0, 0.0),
@@ -180,13 +157,18 @@ impl Renderer {
 
             let cmd_queue = app.get_cmd_queue();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
-                let cmd_buffer = cmd_buffer.as_ref();
+                let mut cmd_buffer = cmd_buffer.as_mut();
                 cmd_buffer.reset();
                 cmd_buffer.begin(vk::CommandBufferUsageFlags::SIMULTANEOUS_USE);
                 cmd_buffer.set_viewport(swapchain.get_extent());
                 cmd_buffer.begin_render_pass(&self.render_pass, &swapchain, img_idx as usize);
-                cmd_buffer.bind_graphics_pipeline(&self.pipeline);
-                cmd_buffer.bind_desc_set(&self.descriptor_sets[img_idx as usize], &self.pipeline);
+                
+                cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
+
+                cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
+                cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer);
+                cmd_buffer.bind_desc_sets();
+
                 for dynamic_model in self.dynamic_models.iter() {
                     dynamic_model.draw(&cmd_buffer);
                 }

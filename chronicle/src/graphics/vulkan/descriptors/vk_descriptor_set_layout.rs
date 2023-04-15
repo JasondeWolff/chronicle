@@ -5,13 +5,16 @@ use ash::vk;
 use crate::graphics::*;
 
 #[derive(Clone)]
-pub struct VkDescriptorLayout {
+pub struct VkDescriptorSetLayout {
     device: Rc<VkLogicalDevice>,
     desc_layout: vk::DescriptorSetLayout
 }
 
-impl VkDescriptorLayout {
-    pub fn new(device: Rc<VkLogicalDevice>, desc_layout_bindings: &Vec<vk::DescriptorSetLayoutBinding>) -> Self {
+impl VkDescriptorSetLayout {
+    pub fn new(
+        device: Rc<VkLogicalDevice>,
+        desc_layout_bindings: &Vec<vk::DescriptorSetLayoutBinding>
+    ) -> Rc<Self> {
         let ubo_layout_create_info = vk::DescriptorSetLayoutCreateInfo {
             s_type: vk::StructureType::DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             p_next: std::ptr::null(),
@@ -26,10 +29,10 @@ impl VkDescriptorLayout {
                 .expect("Failed to create Descriptor Set Layout.")
         };
 
-        VkDescriptorLayout {
+        Rc::new(VkDescriptorSetLayout {
             device: device,
             desc_layout: desc_layout
-        }
+        })
     }
 
     pub fn get_desc_layout(&self) -> vk::DescriptorSetLayout {
@@ -37,7 +40,7 @@ impl VkDescriptorLayout {
     }
 }
 
-impl Drop for VkDescriptorLayout {
+impl Drop for VkDescriptorSetLayout {
     fn drop(&mut self) {
         unsafe {
             self.device.get_device()

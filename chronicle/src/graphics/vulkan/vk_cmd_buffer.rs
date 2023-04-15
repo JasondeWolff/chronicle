@@ -1,5 +1,6 @@
 use std::rc::Rc;
 use std::ptr;
+use std::collections::HashMap;
 
 use ash::vk;
 
@@ -8,11 +9,23 @@ use crate::graphics::*;
 pub struct VkCmdBuffer {
     device: Rc<VkLogicalDevice>,
     cmd_pool: Rc<VkCmdPool>,
-    cmd_buffer: vk::CommandBuffer
+    cmd_buffer: vk::CommandBuffer,
+
+    desc_pool: Rc<VkDescriptorPool>,
+    desc_sets: HashMap<u32, VkDescriptorSet>,
+    desc_layouts: HashMap<u32, Rc<VkDescriptorSetLayout>>,
+
+    pipeline: Option<Rc<VkPipeline>>,
+
+    tracked_buffers: Vec<Rc<VkBuffer>>
 }
 
 impl VkCmdBuffer {
-    pub fn new(device: Rc<VkLogicalDevice>, cmd_pool: Rc<VkCmdPool>) -> Self {
+    pub fn new(
+        device: Rc<VkLogicalDevice>,
+        cmd_pool: Rc<VkCmdPool>,
+        desc_pool: Rc<VkDescriptorPool>
+    ) -> Self {
         let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             p_next: ptr::null(),
@@ -30,7 +43,12 @@ impl VkCmdBuffer {
         VkCmdBuffer {
             device: device.clone(),
             cmd_pool: cmd_pool.clone(),
-            cmd_buffer: command_buffers[0]
+            cmd_buffer: command_buffers[0],
+            desc_pool: desc_pool,
+            desc_sets: HashMap::new(),
+            desc_layouts: HashMap::new(),
+            pipeline: None,
+            tracked_buffers: Vec::new()
         }
     }
 
@@ -38,64 +56,12 @@ impl VkCmdBuffer {
         self.cmd_buffer
     }
 
-    // pub fn submit(&self, wait_semaphores: Option<&Vec<&VkSemaphore>>, signal_semaphores: Option<&Vec<&VkSemaphore>>, fence: Option<&VkFence>) {
-    //     let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
-
-    //     let mut wait_semaphores_raw = Vec::new();
-    //     let mut signal_semaphores_raw = Vec::new();
-
-    //     let (wait_semaphore_count, p_wait_semaphores) = match wait_semaphores {
-    //         Some(wait_semaphores) => {
-    //             for wait_semaphore in wait_semaphores {
-    //                 wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
-    //             }
-
-    //             (wait_semaphores.len() as u32, wait_semaphores_raw.as_ptr())
-    //         },
-    //         None => (0, ptr::null())
-    //     };
-
-    //     let (signal_semaphore_count, p_signal_semaphores) = match signal_semaphores {
-    //         Some(signal_semaphores) => {
-    //             for signal_semaphore in signal_semaphores {
-    //                 signal_semaphores_raw.push(*signal_semaphore.get_semaphore());
-    //             }
-
-    //             (signal_semaphores.len() as u32, signal_semaphores_raw.as_ptr())
-    //         },
-    //         None => (0, ptr::null())
-    //     };
-        
-    //     let submit_infos = [vk::SubmitInfo {
-    //         s_type: vk::StructureType::SUBMIT_INFO,
-    //         p_next: ptr::null(),
-    //         wait_semaphore_count: wait_semaphore_count,
-    //         p_wait_semaphores: p_wait_semaphores,
-    //         p_wait_dst_stage_mask: wait_stages.as_ptr(),
-    //         command_buffer_count: 1,
-    //         p_command_buffers: &self.cmd_buffer,
-    //         signal_semaphore_count: signal_semaphore_count,
-    //         p_signal_semaphores: p_signal_semaphores,
-    //     }];
-
-    //     let fence = match fence {
-    //         Some(fence) => fence.get_fence(),
-    //         None => vk::Fence::null()
-    //     };
-
-    //     unsafe {
-    //         self.device.get_device()
-    //             .queue_submit(
-    //                 self.device.get_graphics_queue(),
-    //                 &submit_infos,
-    //                 fence,
-    //             )
-    //             .expect("Failed to execute queue submit.");
-    //     }
-    // }
-
-    pub fn reset(&self) {
+    pub fn reset(&mut self) {
         unsafe {
+            self.pipeline = None;
+            self.desc_sets.clear();
+            self.tracked_buffers.clear();
+
             self.device.get_device()
                 .reset_command_buffer(
                     self.cmd_buffer,
@@ -196,7 +162,9 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn bind_graphics_pipeline(&self, pipeline: &VkPipeline) {
+    pub fn bind_graphics_pipeline(&mut self, pipeline: Rc<VkPipeline>) {
+        self.pipeline = Some(pipeline.clone());
+
         unsafe {
             self.device.get_device()
                 .cmd_bind_pipeline(
@@ -227,20 +195,6 @@ impl VkCmdBuffer {
                     index_buffer.get_buffer(),
                     0,
                     vk::IndexType::UINT32
-                );
-        }
-    }
-
-    pub fn bind_desc_set(&self, desc_set: &VkDescriptorSet, pipeline: &VkPipeline) {
-        unsafe {
-            self.device.get_device()
-                .cmd_bind_descriptor_sets(
-                    self.cmd_buffer,
-                    vk::PipelineBindPoint::GRAPHICS,
-                    pipeline.get_layout(),
-                    0,
-                    &[desc_set.get_desc_set()],
-                    &[]
                 );
         }
     }
@@ -380,6 +334,86 @@ impl VkCmdBuffer {
                     &[],
                     &[],
                     &image_barriers,
+                );
+        }
+    }
+
+    pub fn set_desc_layout(&mut self,
+        set: u32,
+        layout: Rc<VkDescriptorSetLayout>
+    ) {
+        self.desc_layouts.insert(set, layout);
+    }
+
+    pub fn set_desc_buffer<T: Default>(&mut self,
+        set: u32,
+        binding: u32,
+        desc_type: vk::DescriptorType,
+        uniform_buffer: VkUniformBuffer<T>
+    ) {
+        let desc_layout = self.desc_layouts.get(&set)
+                                                                    .expect("Failed to set desc buffer. (Missing desc layout_");
+
+        let desc_set = match self.desc_sets.get(&set) {
+            Some(desc_set) => desc_set,
+            None => {
+                let desc_set = VkDescriptorSet::new(
+                    self.device.clone(),
+                    self.desc_pool.clone(),
+                    desc_layout.clone()
+                );
+                self.desc_sets.insert(set, desc_set);
+                self.desc_sets.get(&set).as_ref().unwrap()
+            }
+        };
+
+        let descriptor_buffer_info = [vk::DescriptorBufferInfo {
+            buffer: uniform_buffer.get_buffer(),
+            offset: 0,
+            range: std::mem::size_of::<T>() as u64,
+        }];
+
+        let descriptor_write_sets = [
+            vk::WriteDescriptorSet {
+                s_type: vk::StructureType::WRITE_DESCRIPTOR_SET,
+                p_next: std::ptr::null(),
+                dst_set: desc_set.get_desc_set(),
+                dst_binding: binding,
+                dst_array_element: 0,
+                descriptor_count: 1,
+                descriptor_type: desc_type,
+                p_image_info: std::ptr::null(),
+                p_buffer_info: descriptor_buffer_info.as_ptr(),
+                p_texel_buffer_view: std::ptr::null(),
+            }
+        ];
+
+        unsafe {
+            self.device.get_device()
+                .update_descriptor_sets(&descriptor_write_sets, &[]);
+        }
+
+        self.tracked_buffers.push(uniform_buffer.track_buffer());
+    }
+
+    pub fn bind_desc_sets(&self) {
+        let mut sorted_desc_sets: Vec<_> = self.desc_sets.iter().collect();
+        sorted_desc_sets.sort_by(|x, y| x.0.cmp(&y.0));
+
+        let mut desc_set_ptrs = Vec::new();
+        for desc_set in &sorted_desc_sets {
+            desc_set_ptrs.push(desc_set.1.get_desc_set());
+        }
+
+        unsafe {
+            self.device.get_device()
+                .cmd_bind_descriptor_sets(
+                    self.cmd_buffer,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    self.pipeline.as_ref().unwrap().get_layout(),
+                    0,
+                    &desc_set_ptrs,
+                    &[]
                 );
         }
     }

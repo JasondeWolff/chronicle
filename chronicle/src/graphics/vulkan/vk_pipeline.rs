@@ -14,8 +14,9 @@ impl VkPipeline {
         device: Rc<VkLogicalDevice>,
         extent: &vk::Extent2D,
         render_pass: &VkRenderPass,
-        desc_layouts: &Vec<&VkDescriptorLayout>,
-        shaders: &Vec<String>) -> Self {
+        desc_layouts: &Vec<&VkDescriptorSetLayout>,
+        shaders: &Vec<String>
+    ) -> Rc<Self> {
         let main_function_name = std::ffi::CString::new("main").unwrap();
 
         let mut shader_modules = Vec::new();
@@ -214,11 +215,11 @@ impl VkPipeline {
                 .expect("Failed to create Graphics Pipeline.")
         };
 
-        VkPipeline {
+        Rc::new(VkPipeline {
             device: device,
             pipeline_layout: pipeline_layout,
             pipeline: pipeline[0]
-        }
+        })
     }
 
     pub fn get_pipeline(&self) -> vk::Pipeline {

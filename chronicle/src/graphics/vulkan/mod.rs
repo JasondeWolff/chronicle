@@ -46,8 +46,8 @@ pub struct VkApp {
     device: Rc<VkLogicalDevice>,
     graphics_queue: VkCmdQueue,
     present_queue: VkCmdQueue,
-
-    swapchain: Option<RcCell<VkSwapchain>>
+    swapchain: Option<RcCell<VkSwapchain>>,
+    desc_pool: Rc<VkDescriptorPool>
 }
 
 impl VkApp {
@@ -56,13 +56,17 @@ impl VkApp {
         let physical_device = VkPhysicalDevice::new(&vk_instance);
         let device = VkLogicalDevice::new(&vk_instance, &physical_device);
 
+        let descriptor_pool = VkDescriptorPool::new(device.clone());
+
         let graphics_queue = VkCmdQueue::new(
             device.clone(),
+            descriptor_pool.clone(),
             device.get_graphics_queue(),
             VkQueueType::GRAPHICS
         );
         let present_queue = VkCmdQueue::new(
             device.clone(),
+            descriptor_pool.clone(),
             device.get_present_queue(),
             VkQueueType::PRESENT
         );
@@ -79,7 +83,8 @@ impl VkApp {
             device: device,
             graphics_queue: graphics_queue,
             present_queue: present_queue,
-            swapchain: Some(swapchain)
+            swapchain: Some(swapchain),
+            desc_pool: descriptor_pool
         }
     }
 
@@ -118,5 +123,9 @@ impl VkApp {
             Some(swapchain) => Some(swapchain.clone()),
             None => None
         }
+    }
+
+    pub fn get_desc_pool(&self) -> Rc<VkDescriptorPool> {
+        self.desc_pool.clone()
     }
 }
