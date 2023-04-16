@@ -320,16 +320,16 @@ impl Resources {
                         &mut width,
                         &mut height,
                         &mut channels,
-                        0,
+                        4
                     );
                     assert!(!data.is_null(), "Failed to read texture file at \"{:?}\"", asset_path);
-                    let data: Vec<u8> = std::slice::from_raw_parts(data, (width * height * channels) as usize).to_vec();
+                    let data: Vec<u8> = std::slice::from_raw_parts(data, (width * height * 4) as usize).to_vec();
 
                     let resource = Resource::new(Texture {
                         data: data,
                         width: width as u32,
                         height: height as u32,
-                        channel_count: channels as u32
+                        channel_count: 4 as u32
                     });
 
                     self.image_manager.insert(resource.clone(), asset_path);

@@ -15,9 +15,9 @@ impl VkTexture {
         let mut app = app.as_mut();
 
         let (image_width, image_height, channel_count) = (texture_resource.as_ref().width, texture_resource.as_ref().height, texture_resource.as_ref().channel_count);
-        assert_eq!(channel_count, 3, "Failed to create new image.");
+        assert_eq!(channel_count, 4, "Failed to create new image.");
         
-        let image_size = (std::mem::size_of::<u8>() as u32 * image_width * image_height * 4) as vk::DeviceSize;
+        let image_size = (std::mem::size_of::<u8>() as u32 * image_width * image_height * channel_count) as vk::DeviceSize;
         let image_data = &texture_resource.as_ref().data;
 
         let staging_buffer = VkBuffer::new(
@@ -71,5 +71,9 @@ impl VkTexture {
 
     pub fn get_image(&self) -> &VkImage {
         &self.image
+    }
+
+    pub fn get_image_view(&mut self) -> vk::ImageView {
+        self.image.get_image_view()
     }
 }

@@ -349,12 +349,34 @@ impl VkCmdBuffer {
         self.desc_layouts.insert(set, layout);
     }
 
+    // fn get_desc_set(&mut self, set: u32) -> &VkDescriptorSet {
+    //     let desc_layout = self.desc_layouts.get(&set)
+    //                                                                 .expect("Failed to set desc buffer. (Missing desc layout_");
+
+    //     let desc_set = match self.desc_sets.get(&set) {
+    //         Some(desc_set) => desc_set,
+    //         None => {
+    //             let desc_set = VkDescriptorSet::new(
+    //                 self.device.clone(),
+    //                 self.desc_pool.clone(),
+    //                 desc_layout.clone()
+    //             );
+    //             self.desc_sets.insert(set, desc_set);
+    //             self.desc_sets.get(&set).as_ref().unwrap()
+    //         }
+    //     };
+
+    //     desc_set
+    // }
+
     pub fn set_desc_buffer(&mut self,
         set: u32,
         binding: u32,
         desc_type: vk::DescriptorType,
         uniform_buffer: RcCell<VkUniformBuffer>
     ) {
+        // let desc_set = self.get_desc_set(set);
+
         let desc_layout = self.desc_layouts.get(&set)
                                                                     .expect("Failed to set desc buffer. (Missing desc layout_");
 
@@ -364,7 +386,8 @@ impl VkCmdBuffer {
                 let desc_set = VkDescriptorSet::new(
                     self.device.clone(),
                     self.desc_pool.clone(),
-                    desc_layout.clone()
+                    desc_layout.clone(),
+                    desc_type
                 );
                 self.desc_sets.insert(set, desc_set);
                 self.desc_sets.get(&set).as_ref().unwrap()
@@ -398,6 +421,57 @@ impl VkCmdBuffer {
         }
 
         self.tracked_buffers.push(uniform_buffer.as_ref().track_buffer());
+    }
+
+    pub fn set_desc_sampler(&mut self,
+        set: u32,
+        binding: u32,
+        desc_type: vk::DescriptorType,
+        sampler: &VkSampler,
+        texture: &mut VkTexture
+    ) {
+        let desc_layout = self.desc_layouts.get(&set)
+                                                                    .expect("Failed to set desc buffer. (Missing desc layout_");
+
+        let desc_set = match self.desc_sets.get(&set) {
+            Some(desc_set) => desc_set,
+            None => {
+                let desc_set = VkDescriptorSet::new(
+                    self.device.clone(),
+                    self.desc_pool.clone(),
+                    desc_layout.clone(),
+                    desc_type
+                );
+                self.desc_sets.insert(set, desc_set);
+                self.desc_sets.get(&set).as_ref().unwrap()
+            }
+        };
+
+        let descriptor_image_infos = [vk::DescriptorImageInfo {
+            sampler: sampler.get_sampler(),
+            image_view: texture.get_image_view(),
+            image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+        }];
+
+        let descriptor_write_sets = [
+            vk::WriteDescriptorSet {
+                s_type: vk::StructureType::WRITE_DESCRIPTOR_SET,
+                p_next: std::ptr::null(),
+                dst_set: desc_set.get_desc_set(),
+                dst_binding: binding,
+                dst_array_element: 0,
+                descriptor_count: 1,
+                descriptor_type: desc_type,
+                p_image_info: descriptor_image_infos.as_ptr(),
+                p_buffer_info: std::ptr::null(),
+                p_texel_buffer_view: std::ptr::null(),
+            }
+        ];
+
+        unsafe {
+            self.device.get_device()
+                .update_descriptor_sets(&descriptor_write_sets, &[]);
+        }
     }
 
     pub fn bind_desc_sets(&self) {

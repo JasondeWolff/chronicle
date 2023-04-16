@@ -10,6 +10,7 @@ layout(location = 4) in vec2 inTexCoord1;
 layout(location = 5) in vec4 inColor;
 
 layout(location = 0) out vec3 fragColor;
+layout(location = 1) out vec2 fragTexCoord;
 
 out gl_PerVertex {
     vec4 gl_Position;
@@ -24,4 +25,5 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
 void main() {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition.xyz, 1.0);
     fragColor = inNormal * 0.5 + 0.5;
+    fragTexCoord = inTexCoord0;
 }

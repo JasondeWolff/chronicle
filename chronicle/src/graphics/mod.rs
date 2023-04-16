@@ -82,13 +82,13 @@ impl Renderer {
                 stage_flags: vk::ShaderStageFlags::VERTEX,
                 p_immutable_samplers: std::ptr::null(),
             },
-            // vk::DescriptorSetLayoutBinding {
-            //     binding: 1,
-            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
-            //     descriptor_count: 1,
-            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
-            //     p_immutable_samplers: std::ptr::null(),
-            // },
+            vk::DescriptorSetLayoutBinding {
+                binding: 1,
+                descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+                descriptor_count: 1,
+                stage_flags: vk::ShaderStageFlags::FRAGMENT,
+                p_immutable_samplers: std::ptr::null(),
+            },
         ]);
         let pipeline = VkPipeline::new(
             device.clone(),
@@ -168,6 +168,7 @@ impl Renderer {
 
                 cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
                 cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer.clone());
+                cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, &self.sampler, &mut self.dynamic_models[0].vk_textures[0]);
                 cmd_buffer.bind_desc_sets();
 
                 for dynamic_model in self.dynamic_models.iter() {
