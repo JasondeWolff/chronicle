@@ -47,13 +47,9 @@ struct UBO {
     proj: Matrix4<f32>
 }
 
-impl Default for UBO {
-    fn default() -> Self {
-        UBO {
-            model: Matrix4::zero(),
-            view: Matrix4::zero(),
-            proj: Matrix4::zero()
-        }
+impl ToAny for UBO {
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
@@ -134,39 +130,44 @@ impl Renderer {
 
     fn render(&mut self) {
         let mut app = self.app.as_mut();
-        if let Some(swapchain) = app.get_swapchain() {
-            let mut swapchain = swapchain.as_mut();
-            let img_idx = swapchain.next_image();
-            let img_available = swapchain.image_available_semaphore();
-            let render_finished = swapchain.render_finished_semaphore();
 
-            let mut uniform_buffer = VkUniformBuffer::<UBO>::new(app.get_device(), app.get_physical_device());
-            let ubo = uniform_buffer.data();
-            ubo.model = Matrix4::from_angle_y(Deg(90.0 * crate::app().time()));
-            ubo.view = Matrix4::look_at(
-                Point3::new(2.0, 0.0, 2.0),
-                Point3::new(0.0, 0.0, 0.0),
-                Vector3::new(0.0, 1.0, 0.0),
-            );
-            ubo.proj = cgmath::perspective(
-                Deg(60.0),
-                crate::app().window().width() as f32 / crate::app().window().height() as f32,
-                0.1,
-                20.0,
-            );
+        if let Some(swapchain) = app.get_swapchain() {
+            {
+                let mut swapchain = swapchain.as_mut();
+                swapchain.next_image();
+            }
+            
+            let uniform_buffer = app.uniform_buffer::<UBO>("matrices"); {
+                let mut uniform_buffer = uniform_buffer.as_mut();
+                let ubo: &mut UBO = uniform_buffer.data();
+                ubo.model = Matrix4::from_angle_y(Deg(90.0 * crate::app().time()));
+                ubo.view = Matrix4::look_at(
+                    Point3::new(2.0, 0.0, 2.0),
+                    Point3::new(0.0, 0.0, 0.0),
+                    Vector3::new(0.0, 1.0, 0.0),
+                );
+                ubo.proj = cgmath::perspective(
+                    Deg(60.0),
+                    crate::app().window().width() as f32 / crate::app().window().height() as f32,
+                    0.1,
+                    20.0,
+                );
+            }
 
             let cmd_queue = app.get_cmd_queue();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
                 let mut cmd_buffer = cmd_buffer.as_mut();
                 cmd_buffer.reset();
                 cmd_buffer.begin(vk::CommandBufferUsageFlags::SIMULTANEOUS_USE);
+
+                let swapchain = swapchain.as_ref();
                 cmd_buffer.set_viewport(swapchain.get_extent());
-                cmd_buffer.begin_render_pass(&self.render_pass, &swapchain, img_idx as usize);
+                cmd_buffer.begin_render_pass(&self.render_pass, &swapchain);
                 
                 cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
 
                 cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
-                cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer);
+                cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer.clone());
                 cmd_buffer.bind_desc_sets();
 
                 for dynamic_model in self.dynamic_models.iter() {
@@ -175,6 +176,10 @@ impl Renderer {
                 cmd_buffer.end_render_pass();
                 cmd_buffer.end();
             }
+
+            let mut swapchain = swapchain.as_mut();
+            let img_available = swapchain.image_available_semaphore();
+            let render_finished = swapchain.render_finished_semaphore();
 
             let fence = cmd_queue.submit_cmd_buffer(
                 cmd_buffer,

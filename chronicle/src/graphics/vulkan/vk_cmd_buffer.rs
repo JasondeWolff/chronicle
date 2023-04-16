@@ -6,6 +6,9 @@ use ash::vk;
 
 use crate::graphics::*;
 
+// TODO: find a way to prevent recreating UBO's every single frame
+// track all used resources (eg the copy buffer fn)
+
 pub struct VkCmdBuffer {
     device: Rc<VkLogicalDevice>,
     cmd_pool: Rc<VkCmdPool>,
@@ -60,6 +63,7 @@ impl VkCmdBuffer {
         unsafe {
             self.pipeline = None;
             self.desc_sets.clear();
+            self.desc_layouts.clear();
             self.tracked_buffers.clear();
 
             self.device.get_device()
@@ -126,7 +130,7 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain, frame_idx: usize) {
+    pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain) {
         let clear_values = [vk::ClearValue {
             color: vk::ClearColorValue {
                 float32: [0.0, 0.0, 0.0, 1.0],
@@ -137,7 +141,7 @@ impl VkCmdBuffer {
             s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
             p_next: ptr::null(),
             render_pass: render_pass.get_render_pass(),
-            framebuffer: *swapchain.get_framebuffer(frame_idx),
+            framebuffer: *swapchain.get_current_framebuffer(),
             render_area: vk::Rect2D {
                 offset: vk::Offset2D { x: 0, y: 0 },
                 extent: *swapchain.get_extent(),
@@ -345,11 +349,11 @@ impl VkCmdBuffer {
         self.desc_layouts.insert(set, layout);
     }
 
-    pub fn set_desc_buffer<T: Default>(&mut self,
+    pub fn set_desc_buffer(&mut self,
         set: u32,
         binding: u32,
         desc_type: vk::DescriptorType,
-        uniform_buffer: VkUniformBuffer<T>
+        uniform_buffer: RcCell<VkUniformBuffer>
     ) {
         let desc_layout = self.desc_layouts.get(&set)
                                                                     .expect("Failed to set desc buffer. (Missing desc layout_");
@@ -368,9 +372,9 @@ impl VkCmdBuffer {
         };
 
         let descriptor_buffer_info = [vk::DescriptorBufferInfo {
-            buffer: uniform_buffer.get_buffer(),
+            buffer: uniform_buffer.as_ref().get_buffer(),
             offset: 0,
-            range: std::mem::size_of::<T>() as u64,
+            range: uniform_buffer.as_ref().size() as u64,
         }];
 
         let descriptor_write_sets = [
@@ -393,7 +397,7 @@ impl VkCmdBuffer {
                 .update_descriptor_sets(&descriptor_write_sets, &[]);
         }
 
-        self.tracked_buffers.push(uniform_buffer.track_buffer());
+        self.tracked_buffers.push(uniform_buffer.as_ref().track_buffer());
     }
 
     pub fn bind_desc_sets(&self) {

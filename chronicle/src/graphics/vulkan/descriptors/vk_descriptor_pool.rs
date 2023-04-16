@@ -21,6 +21,8 @@ const DESCRIPTOR_TYPES: [vk::DescriptorType; 11] = [
 
 // TODO: Implement desc pooling and resetting here? Instead of destroying and recreating them every frame
 // also remove VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT then
+// make descriptor sets only obtainable by using a desc pool
+// descriptor set layout should be hashable to reuse old descriptors
 
 pub struct VkDescriptorPool {
     device: Rc<VkLogicalDevice>,

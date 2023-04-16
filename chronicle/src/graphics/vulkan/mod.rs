@@ -1,6 +1,6 @@
 use ash::vk;
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashMap, hash::Hash};
 
 pub use super::window::*;
 
@@ -40,6 +40,10 @@ pub use vk_sampler::*;
 
 use crate::graphics::*;
 
+pub trait ToAny: 'static {
+    fn as_any(&mut self) -> &mut dyn std::any::Any;
+}
+
 pub struct VkApp {
     vk_instance: VkInstance,
     physical_device: VkPhysicalDevice,
@@ -47,7 +51,9 @@ pub struct VkApp {
     graphics_queue: VkCmdQueue,
     present_queue: VkCmdQueue,
     swapchain: Option<RcCell<VkSwapchain>>,
-    desc_pool: Rc<VkDescriptorPool>
+    desc_pool: Rc<VkDescriptorPool>,
+
+    uniform_buffers: HashMap<String, Vec<RcCell<VkUniformBuffer>>>
 }
 
 impl VkApp {
@@ -84,7 +90,8 @@ impl VkApp {
             graphics_queue: graphics_queue,
             present_queue: present_queue,
             swapchain: Some(swapchain),
-            desc_pool: descriptor_pool
+            desc_pool: descriptor_pool,
+            uniform_buffers: HashMap::new()
         }
     }
 
@@ -127,5 +134,30 @@ impl VkApp {
 
     pub fn get_desc_pool(&self) -> Rc<VkDescriptorPool> {
         self.desc_pool.clone()
+    }
+
+    pub fn uniform_buffer<T: ToAny>(&mut self, name: &str) -> RcCell<VkUniformBuffer> {
+        let name = String::from(name);
+
+        let swapchain = self.swapchain.as_ref().unwrap().as_ref();
+        let img_count = swapchain.get_framebuffer_count() as usize;
+        let img_idx = swapchain.get_current_img() as usize;
+
+        match self.uniform_buffers.get(&name) {
+            Some(uniform_buffer) => uniform_buffer[img_idx].clone(),
+            None => {
+                let mut uniform_buffers = Vec::new();
+                for _ in 0..img_count {
+                    uniform_buffers.push(RcCell::new(VkUniformBuffer::new::<T>(
+                        self.device.clone(),
+                        &self.physical_device
+                    )));
+                }
+
+                let uniform_buffer = uniform_buffers[img_idx].clone();
+                self.uniform_buffers.insert(name, uniform_buffers);
+                uniform_buffer
+            }
+        }
     }
 }

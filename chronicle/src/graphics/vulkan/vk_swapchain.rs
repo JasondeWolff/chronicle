@@ -259,8 +259,8 @@ impl VkSwapchain {
         self.swapchain_format
     }
 
-    pub fn get_framebuffer(&self, idx: usize) -> &vk::Framebuffer {
-        &self.framebuffers[idx]
+    pub fn get_current_framebuffer(&self) -> &vk::Framebuffer {
+        &self.framebuffers[self.current_img as usize]
     }
 
     pub fn get_framebuffer_count(&self) -> usize {
@@ -271,7 +271,7 @@ impl VkSwapchain {
         self.present_render_pass.clone()
     }
 
-    pub fn next_image(&mut self) -> u32 {
+    pub fn next_image(&mut self) {
         self.inflight_fences[self.current_frame].wait();
 
         self.current_img = unsafe {
@@ -286,7 +286,9 @@ impl VkSwapchain {
         };
 
         self.inflight_fences[self.current_frame].reset();
+    }
 
+    pub fn get_current_img(&self) -> u32 {
         self.current_img
     }
 

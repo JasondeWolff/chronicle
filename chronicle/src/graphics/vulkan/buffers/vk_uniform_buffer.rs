@@ -4,26 +4,30 @@ use ash::vk;
 
 use crate::graphics::*;
 
-pub struct VkUniformBuffer<T: Default> {
+pub struct VkUniformBuffer {
     uniform_buffer: Rc<VkBuffer>,
-    data: *mut T
+    data: *mut dyn ToAny,
+    size: usize
 }
 
-impl<T: Default> VkUniformBuffer<T> {
-    pub fn new(device: Rc<VkLogicalDevice>, physical_device: &VkPhysicalDevice) -> Self {
+impl VkUniformBuffer {
+    pub fn new<T: ToAny>(device: Rc<VkLogicalDevice>, physical_device: &VkPhysicalDevice) -> Self {
+        let size = std::mem::size_of::<T>();
+
         let uniform_buffer = Rc::new(VkBuffer::new(
             device,
-            std::mem::size_of::<T>() as u64,
+            size as u64,
             vk::BufferUsageFlags::UNIFORM_BUFFER,
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
             physical_device.get_mem_properties()
         ));
 
         let data = uniform_buffer.map() as *mut T;
-
+        
         VkUniformBuffer {
             uniform_buffer: uniform_buffer,
-            data: data
+            data: data,
+            size: size
         }
     }
 
@@ -35,12 +39,20 @@ impl<T: Default> VkUniformBuffer<T> {
         self.uniform_buffer.get_buffer()
     }
 
-    pub fn data(&mut self) -> &mut T {
-        unsafe { self.data.as_mut().unwrap() }
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn data<T: ToAny>(&mut self) -> &mut T {
+        let data = unsafe { self.data.as_mut().unwrap() };
+        match data.as_any().downcast_mut::<T>() {
+            Some(i) => i,
+            None => panic!("Failed to get uniform buffer. (Generic type mismatch)")
+        }
     }
 }
 
-impl<T: Default> Drop for VkUniformBuffer<T> {
+impl Drop for VkUniformBuffer {
     fn drop(&mut self) {
         self.uniform_buffer.unmap();
     }
