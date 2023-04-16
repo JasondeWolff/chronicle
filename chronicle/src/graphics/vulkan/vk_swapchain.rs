@@ -15,6 +15,7 @@ pub struct VkSwapchain {
     swapchain_format: vk::Format,
     swapchain_extent: vk::Extent2D,
     swapchain_imageviews: Vec<vk::ImageView>,
+    depth_img: VkImage,
 
     framebuffers: Vec<vk::Framebuffer>,
 
@@ -116,11 +117,26 @@ impl VkSwapchain {
             inflight_fences.push(VkFence::new(device.clone(), true));
         }
 
+        let mut depth_img = VkImage::new(
+            device.clone(),
+            width,
+            height,
+            Self::optimal_depth_format(instance, physical_device),
+            vk::ImageTiling::OPTIMAL,
+            vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
+            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            physical_device.get_mem_properties()
+        );
+
         let mut framebuffers = Vec::new();
-        let present_render_pass = VkRenderPass::new(device.clone(), surface_format.format);
+        let present_render_pass = VkRenderPass::new(
+            device.clone(),
+            surface_format.format,
+            depth_img.format()
+        );
         
         for &image_view in swapchain_imageviews.iter() {
-            let attachments = [image_view];
+            let attachments = [image_view, depth_img.get_image_view()];
 
             let framebuffer_create_info = vk::FramebufferCreateInfo {
                 s_type: vk::StructureType::FRAMEBUFFER_CREATE_INFO,
@@ -152,11 +168,15 @@ impl VkSwapchain {
             swapchain_extent: extent,
             _swapchain_images: swapchain_images,
             swapchain_imageviews: swapchain_imageviews,
+            depth_img: depth_img,
+
             framebuffers: framebuffers,
+
             present_render_pass: present_render_pass,
             image_available_semaphores: image_available_semaphores,
             render_finished_semaphores: render_finished_semaphores,
             inflight_fences: inflight_fences.try_into().unwrap_or_else(|_| panic!("")),
+
             current_frame: 0,
             current_img: 0
         })
@@ -249,6 +269,41 @@ impl VkSwapchain {
         }
 
         swapchain_imageviews
+    }
+
+    fn optimal_depth_format(instance: &VkInstance, physical_device: &VkPhysicalDevice) -> vk::Format {
+        Self::find_supported_format(
+            instance, physical_device,
+            &[
+                vk::Format::D32_SFLOAT,
+                vk::Format::D32_SFLOAT_S8_UINT,
+                vk::Format::D24_UNORM_S8_UINT,
+            ],
+            vk::ImageTiling::OPTIMAL,
+            vk::FormatFeatureFlags::DEPTH_STENCIL_ATTACHMENT,
+        )
+    }
+
+    fn find_supported_format(
+        instance: &VkInstance, physical_device: &VkPhysicalDevice,
+        candidate_formats: &[vk::Format],
+        tiling: vk::ImageTiling,
+        features: vk::FormatFeatureFlags
+    ) -> vk::Format {
+        for &format in candidate_formats.iter() {
+            let format_properties = unsafe {
+                instance.get_instance()
+                    .get_physical_device_format_properties(physical_device.get_device(), format)
+            };
+
+            if tiling == vk::ImageTiling::LINEAR && format_properties.linear_tiling_features.contains(features) {
+                return format.clone();
+            } else if tiling == vk::ImageTiling::OPTIMAL && format_properties.optimal_tiling_features.contains(features) {
+                return format.clone();
+            }
+        }
+
+        panic!("Failed to find supported format.")
     }
 
     pub fn get_extent(&self) -> &vk::Extent2D {

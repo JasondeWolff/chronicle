@@ -45,7 +45,7 @@ pub trait ToAny: 'static {
 }
 
 pub struct VkApp {
-    vk_instance: VkInstance,
+    instance: VkInstance,
     physical_device: VkPhysicalDevice,
     device: Rc<VkLogicalDevice>,
     graphics_queue: VkCmdQueue,
@@ -58,9 +58,9 @@ pub struct VkApp {
 
 impl VkApp {
     pub fn new(window: &Window) -> Self {
-        let vk_instance = VkInstance::new("Chronicle", &window);
-        let physical_device = VkPhysicalDevice::new(&vk_instance);
-        let device = VkLogicalDevice::new(&vk_instance, &physical_device);
+        let instance = VkInstance::new("Chronicle", &window);
+        let physical_device = VkPhysicalDevice::new(&instance);
+        let device = VkLogicalDevice::new(&instance, &physical_device);
 
         let descriptor_pool = VkDescriptorPool::new(device.clone());
 
@@ -78,13 +78,13 @@ impl VkApp {
         );
 
         let swapchain = VkSwapchain::new(
-            &vk_instance,
+            &instance,
             device.clone(), &physical_device,
             window.width(), window.height()
         );
 
         VkApp {
-            vk_instance: vk_instance,
+            instance: instance,
             physical_device: physical_device,
             device: device,
             graphics_queue: graphics_queue,
@@ -106,7 +106,7 @@ impl VkApp {
         self.swapchain = None;
         if width > 0 && height > 0 {
             self.swapchain = Some(VkSwapchain::new(
-                &self.vk_instance,
+                &self.instance,
                 self.device.clone(), &self.physical_device,
                 width, height
             ));

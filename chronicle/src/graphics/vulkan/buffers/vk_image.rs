@@ -94,6 +94,13 @@ impl VkImage {
         image: vk::Image,
         format: vk::Format
     ) -> vk::ImageView {
+        let aspect_mask = match format {
+            vk::Format::D32_SFLOAT | vk::Format::D32_SFLOAT_S8_UINT | vk::Format::D24_UNORM_S8_UINT => {
+                vk::ImageAspectFlags::DEPTH
+            },
+            _ => vk::ImageAspectFlags::COLOR
+        };
+
         let imageview_create_info = vk::ImageViewCreateInfo {
             s_type: vk::StructureType::IMAGE_VIEW_CREATE_INFO,
             p_next: std::ptr::null(),
@@ -107,7 +114,7 @@ impl VkImage {
                 a: vk::ComponentSwizzle::IDENTITY,
             },
             subresource_range: vk::ImageSubresourceRange {
-                aspect_mask: vk::ImageAspectFlags::COLOR,
+                aspect_mask: aspect_mask,
                 base_mip_level: 0,
                 level_count: 1,
                 base_array_layer: 0,
@@ -147,6 +154,10 @@ impl VkImage {
 
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    pub fn format(&self) -> vk::Format {
+        self.format
     }
 }
 

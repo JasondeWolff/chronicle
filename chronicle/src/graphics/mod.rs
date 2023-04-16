@@ -69,7 +69,6 @@ impl Renderer {
     pub(crate) fn init(window: &Window) -> Box<Self> {
         let app = VkApp::new(window);
         let device = app.get_device();
-        let physical_device = app.get_physical_device();
         let swapchain = app.get_swapchain().unwrap();
         let swapchain = swapchain.as_ref();
 
