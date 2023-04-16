@@ -25,6 +25,7 @@ pub struct DynamicRenderModel {
     model_resource: Resource<Model>,
     vk_meshes: Vec<VkMesh>,
     vk_textures: Vec<VkTexture>,
+    vk_samplers: Vec<VkSampler>,
     properties: RcCell<DynamicRenderModelProperties>
 }
 
@@ -61,8 +62,7 @@ pub struct Renderer {
 
     descriptor_layout: Rc<VkDescriptorSetLayout>,
 
-    dynamic_models: Vec<DynamicRenderModel>,
-    sampler: VkSampler
+    dynamic_models: Vec<DynamicRenderModel>
 }
 
 impl Renderer {
@@ -97,16 +97,13 @@ impl Renderer {
             &vec![String::from("shader.vert"), String::from("shader.frag")]
         );
 
-        let sampler = VkSampler::new(device.clone());
-
         Box::new(Renderer {
             app: RcCell::new(app),
             render_pass: render_pass,
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
 
-            dynamic_models: Vec::new(),
-            sampler: sampler
+            dynamic_models: Vec::new()
         })
     }
 
@@ -139,7 +136,7 @@ impl Renderer {
             let uniform_buffer = app.uniform_buffer::<UBO>("matrices"); {
                 let mut uniform_buffer = uniform_buffer.as_mut();
                 let ubo: &mut UBO = uniform_buffer.data();
-                ubo.model = Matrix4::from_angle_y(Deg(90.0 * crate::app().time()));
+                ubo.model = Matrix4::from_angle_y(Deg(45.0 * crate::app().time()));
                 ubo.view = Matrix4::look_at(
                     Point3::new(2.0, 0.0, 2.0),
                     Point3::new(0.0, 0.0, 0.0),
@@ -167,7 +164,8 @@ impl Renderer {
 
                 cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
                 cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer.clone());
-                cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, &self.sampler, &mut self.dynamic_models[0].vk_textures[0]);
+                let dynamic_model = &mut self.dynamic_models[0];
+                cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, &dynamic_model.vk_samplers[0], &mut dynamic_model.vk_textures[0]);
                 cmd_buffer.bind_desc_sets();
 
                 for dynamic_model in self.dynamic_models.iter() {
@@ -222,10 +220,16 @@ impl Renderer {
             ));
         }
 
+        let samplers = vec![VkSampler::new( // HARDCODED!!!!
+            self.app.as_ref().get_device(),
+            &textures[0]
+        )];
+
         let dynamic_render_model = DynamicRenderModel {
             model_resource: model_resource,
             vk_meshes: meshes,
             vk_textures: textures,
+            vk_samplers: samplers,
             properties: properties.clone()
         };
         self.dynamic_models.push(dynamic_render_model);

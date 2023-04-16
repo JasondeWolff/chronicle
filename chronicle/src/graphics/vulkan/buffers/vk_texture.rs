@@ -4,7 +4,8 @@ use crate::graphics::*;
 use crate::resources::Texture;
 
 pub struct VkTexture {
-    image: VkImage
+    image: VkImage,
+    mip_levels: u32
 }
 
 impl VkTexture {
@@ -19,6 +20,7 @@ impl VkTexture {
         
         let image_size = (std::mem::size_of::<u8>() as u32 * image_width * image_height * channel_count) as vk::DeviceSize;
         let image_data = &texture_resource.as_ref().data;
+        let mip_levels = texture_resource.as_ref().mip_levels;
 
         let staging_buffer = VkBuffer::new(
             app.get_device().clone(),
@@ -37,9 +39,10 @@ impl VkTexture {
         let image = VkImage::new(
             app.get_device().clone(),
             image_width, image_height,
+            mip_levels,
             vk::Format::R8G8B8A8_UNORM,
             vk::ImageTiling::OPTIMAL,
-            vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
+            vk::ImageUsageFlags::TRANSFER_SRC | vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
             app.get_physical_device().get_mem_properties(),
         );
@@ -51,21 +54,19 @@ impl VkTexture {
             cmd_buffer_ref.transition_image_layout(
                 &image,
                 vk::ImageLayout::UNDEFINED,
-                vk::ImageLayout::TRANSFER_DST_OPTIMAL
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                mip_levels
             );
             cmd_buffer_ref.copy_buffer_to_image(&staging_buffer, &image);
-            cmd_buffer_ref.transition_image_layout(
-                &image,
-                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
-            );
+            cmd_buffer_ref.generate_mips(&image, mip_levels);
             cmd_buffer_ref.end();
         }
         cmd_queue.submit_cmd_buffer(cmd_buffer, None, None);
         app.get_device().wait_idle();
 
         VkTexture {
-            image: image
+            image: image,
+            mip_levels: mip_levels
         }
     }
 
@@ -75,5 +76,9 @@ impl VkTexture {
 
     pub fn get_image_view(&mut self) -> vk::ImageView {
         self.image.get_image_view()
+    }
+
+    pub fn mip_levels(&self) -> u32 {
+        self.mip_levels
     }
 }

@@ -325,11 +325,14 @@ impl Resources {
                     assert!(!data.is_null(), "Failed to read texture file at \"{:?}\"", asset_path);
                     let data: Vec<u8> = std::slice::from_raw_parts(data, (width * height * 4) as usize).to_vec();
 
+                    let mip_levels = ((width.max(height) as f32).log2().floor() as u32) + 1;
+
                     let resource = Resource::new(Texture {
                         data: data,
                         width: width as u32,
                         height: height as u32,
-                        channel_count: 4 as u32
+                        channel_count: 4 as u32,
+                        mip_levels: mip_levels
                     });
 
                     self.image_manager.insert(resource.clone(), asset_path);

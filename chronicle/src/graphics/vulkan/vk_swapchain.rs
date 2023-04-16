@@ -119,8 +119,8 @@ impl VkSwapchain {
 
         let mut depth_img = VkImage::new(
             device.clone(),
-            width,
-            height,
+            width, height,
+            1,
             Self::optimal_depth_format(instance, physical_device),
             vk::ImageTiling::OPTIMAL,
             vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,

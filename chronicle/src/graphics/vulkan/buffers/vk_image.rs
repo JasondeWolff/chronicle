@@ -17,6 +17,7 @@ impl VkImage {
     pub fn new(
         device: Rc<VkLogicalDevice>,
         width: u32, height: u32,
+        mip_levels: u32,
         format: vk::Format,
         tiling: vk::ImageTiling,
         usage: vk::ImageUsageFlags,
@@ -34,7 +35,7 @@ impl VkImage {
                 height,
                 depth: 1,
             },
-            mip_levels: 1,
+            mip_levels: mip_levels,
             array_layers: 1,
             samples: vk::SampleCountFlags::TYPE_1,
             tiling,
