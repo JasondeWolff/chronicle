@@ -98,7 +98,7 @@ impl VkPipeline {
             s_type: vk::StructureType::PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             flags: vk::PipelineMultisampleStateCreateFlags::empty(),
             p_next: ptr::null(),
-            rasterization_samples: vk::SampleCountFlags::TYPE_1,
+            rasterization_samples: render_pass.get_sample_count(),
             sample_shading_enable: vk::FALSE,
             min_sample_shading: 0.0,
             p_sample_mask: ptr::null(),

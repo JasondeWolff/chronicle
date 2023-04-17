@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, ptr::swap};
 
 use ash::vk;
 
@@ -15,6 +15,8 @@ pub use window::*;
 mod vulkan;
 use vulkan::*;
 
+
+// TODO: MSAA, multiple objects, materials, imgui
 
 #[derive(Debug, Clone, Copy)]
 pub struct DynamicRenderModelProperties {
@@ -57,6 +59,8 @@ impl ToAny for UBO {
 pub struct Renderer {
     app: RcCell<VkApp>,
 
+    render_img: RcCell<VkImage>,
+    msaa_samples: vk::SampleCountFlags,
     render_pass: Rc<VkRenderPass>,
     pipeline: Rc<VkPipeline>,
 
@@ -69,10 +73,36 @@ impl Renderer {
     pub(crate) fn init(window: &Window) -> Box<Self> {
         let app = VkApp::new(window);
         let device = app.get_device();
+        let physical_device = app.get_physical_device();
         let swapchain = app.get_swapchain().unwrap();
-        let swapchain = swapchain.as_ref();
+        let mut swapchain = swapchain.as_mut();
 
-        let render_pass = swapchain.get_render_pass();
+        let max_sample_count = physical_device.get_max_sample_count();
+        let render_img = RcCell::new(VkImage::new(
+            device.clone(),
+            swapchain.get_extent().width, swapchain.get_extent().height,
+            1,
+            swapchain.get_color_format(),
+            max_sample_count,
+            vk::ImageTiling::OPTIMAL,
+            vk::ImageUsageFlags::TRANSIENT_ATTACHMENT | vk::ImageUsageFlags::COLOR_ATTACHMENT,
+            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            physical_device.get_mem_properties()
+        ));
+
+        let render_pass = VkRenderPass::new(
+            device.clone(),
+            swapchain.get_color_format(),
+            swapchain.get_depth_format(),
+            max_sample_count
+        );
+
+        swapchain.build_framebuffers(
+            physical_device,
+            render_pass.clone(),
+            render_img.clone()
+        );
+
         let descriptor_layout = VkDescriptorSetLayout::new(device.clone(), &vec![
             vk::DescriptorSetLayoutBinding {
                 binding: 0,
@@ -99,6 +129,8 @@ impl Renderer {
 
         Box::new(Renderer {
             app: RcCell::new(app),
+            render_img: render_img,
+            msaa_samples: max_sample_count,
             render_pass: render_pass,
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
@@ -195,7 +227,34 @@ impl Renderer {
     }
 
     pub(crate) fn resize(&mut self, width: u32, height: u32) {
-        self.app.as_mut().resize(width, height);
+        let mut app = self.app.as_mut();
+        app.resize(width, height);
+
+        if let Some(swapchain) = app.get_swapchain() {
+            let mut swapchain = swapchain.as_mut();
+            let device = app.get_device();
+            let physical_device = app.get_physical_device();
+
+            let sample_count = self.render_img.as_ref().sample_count();
+
+            self.render_img = RcCell::new(VkImage::new(
+                device.clone(),
+                swapchain.get_extent().width, swapchain.get_extent().height,
+                1,
+                swapchain.get_color_format(),
+                sample_count,
+                vk::ImageTiling::OPTIMAL,
+                vk::ImageUsageFlags::TRANSIENT_ATTACHMENT | vk::ImageUsageFlags::COLOR_ATTACHMENT,
+                vk::MemoryPropertyFlags::DEVICE_LOCAL,
+                physical_device.get_mem_properties()
+            ));
+
+            swapchain.build_framebuffers(
+                physical_device,
+                self.render_pass.clone(),
+                self.render_img.clone()
+            );
+        }
     }
 
     pub fn create_dynamic_model(&mut self, model_resource: Resource<Model>) -> RcCell<DynamicRenderModelProperties> {

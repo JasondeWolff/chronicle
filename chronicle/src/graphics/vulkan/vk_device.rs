@@ -25,7 +25,8 @@ impl QueueFamilyIndices {
 
 pub struct VkPhysicalDevice {
     device: vk::PhysicalDevice,
-    mem_properties: vk::PhysicalDeviceMemoryProperties
+    mem_properties: vk::PhysicalDeviceMemoryProperties,
+    max_sample_count: vk::SampleCountFlags
 }
 
 pub struct VkLogicalDevice {
@@ -46,9 +47,15 @@ impl VkPhysicalDevice {
                 .get_physical_device_memory_properties(device)
         };
 
+        let max_sample_count = Self::max_sample_count(
+            instance.get_instance(),
+            device
+        );
+
         VkPhysicalDevice {
             device: device,
-            mem_properties: mem_properties
+            mem_properties: mem_properties,
+            max_sample_count: max_sample_count
         }
     }
 
@@ -181,12 +188,55 @@ impl VkPhysicalDevice {
         queue_family_indices
     }
 
+    fn max_sample_count(
+        instance: &ash::Instance,
+        physical_device: vk::PhysicalDevice,
+    ) -> vk::SampleCountFlags {
+        let physical_device_properties = unsafe {
+            instance.get_physical_device_properties(physical_device)
+        };
+
+        let count = std::cmp::min(
+            physical_device_properties
+                .limits
+                .framebuffer_color_sample_counts,
+            physical_device_properties
+                .limits
+                .framebuffer_depth_sample_counts,
+        );
+
+        if count.contains(vk::SampleCountFlags::TYPE_64) {
+            return vk::SampleCountFlags::TYPE_64;
+        }
+        if count.contains(vk::SampleCountFlags::TYPE_32) {
+            return vk::SampleCountFlags::TYPE_32;
+        }
+        if count.contains(vk::SampleCountFlags::TYPE_16) {
+            return vk::SampleCountFlags::TYPE_16;
+        }
+        if count.contains(vk::SampleCountFlags::TYPE_8) {
+            return vk::SampleCountFlags::TYPE_8;
+        }
+        if count.contains(vk::SampleCountFlags::TYPE_4) {
+            return vk::SampleCountFlags::TYPE_4;
+        }
+        if count.contains(vk::SampleCountFlags::TYPE_2) {
+            return vk::SampleCountFlags::TYPE_2;
+        }
+
+        vk::SampleCountFlags::TYPE_1
+    }
+
     pub fn get_device(&self) -> vk::PhysicalDevice {
         self.device
     }
 
     pub fn get_mem_properties(&self) -> &vk::PhysicalDeviceMemoryProperties {
         &self.mem_properties
+    }
+
+    pub fn get_max_sample_count(&self) -> vk::SampleCountFlags {
+        self.max_sample_count
     }
 }
 

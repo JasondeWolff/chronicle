@@ -10,7 +10,8 @@ pub struct VkImage {
     image_view: Option<vk::ImageView>,
     memory: vk::DeviceMemory,
     width: u32, height: u32,
-    format: vk::Format
+    format: vk::Format,
+    sample_count: vk::SampleCountFlags
 }
 
 impl VkImage {
@@ -19,6 +20,7 @@ impl VkImage {
         width: u32, height: u32,
         mip_levels: u32,
         format: vk::Format,
+        samples: vk::SampleCountFlags,
         tiling: vk::ImageTiling,
         usage: vk::ImageUsageFlags,
         required_memory_properties: vk::MemoryPropertyFlags,
@@ -37,7 +39,7 @@ impl VkImage {
             },
             mip_levels: mip_levels,
             array_layers: 1,
-            samples: vk::SampleCountFlags::TYPE_1,
+            samples,
             tiling,
             usage,
             sharing_mode: vk::SharingMode::EXCLUSIVE,
@@ -86,7 +88,8 @@ impl VkImage {
             memory: texture_image_memory,
             width: width,
             height: height,
-            format: format
+            format: format,
+            sample_count: samples
         }
     }
 
@@ -159,6 +162,10 @@ impl VkImage {
 
     pub fn format(&self) -> vk::Format {
         self.format
+    }
+
+    pub fn sample_count(&self) -> vk::SampleCountFlags {
+        self.sample_count
     }
 }
 

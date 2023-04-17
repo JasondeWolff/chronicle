@@ -12,14 +12,13 @@ pub struct VkSwapchain {
     swapchain_loader: ash::extensions::khr::Swapchain,
     swapchain: vk::SwapchainKHR,
     _swapchain_images: Vec<vk::Image>,
-    swapchain_format: vk::Format,
+    color_format: vk::Format,
+    depth_format: vk::Format,
     swapchain_extent: vk::Extent2D,
     swapchain_imageviews: Vec<vk::ImageView>,
-    depth_img: VkImage,
 
+    depth_img: Option<VkImage>,
     framebuffers: Vec<vk::Framebuffer>,
-
-    present_render_pass: Rc<VkRenderPass>,
 
     image_available_semaphores: Vec<Rc<VkSemaphore>>,
     render_finished_semaphores: Vec<Rc<VkSemaphore>>,
@@ -117,62 +116,22 @@ impl VkSwapchain {
             inflight_fences.push(VkFence::new(device.clone(), true));
         }
 
-        let mut depth_img = VkImage::new(
-            device.clone(),
-            width, height,
-            1,
-            Self::optimal_depth_format(instance, physical_device),
-            vk::ImageTiling::OPTIMAL,
-            vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
-            vk::MemoryPropertyFlags::DEVICE_LOCAL,
-            physical_device.get_mem_properties()
-        );
-
-        let mut framebuffers = Vec::new();
-        let present_render_pass = VkRenderPass::new(
-            device.clone(),
-            surface_format.format,
-            depth_img.format()
-        );
-        
-        for &image_view in swapchain_imageviews.iter() {
-            let attachments = [image_view, depth_img.get_image_view()];
-
-            let framebuffer_create_info = vk::FramebufferCreateInfo {
-                s_type: vk::StructureType::FRAMEBUFFER_CREATE_INFO,
-                p_next: std::ptr::null(),
-                flags: vk::FramebufferCreateFlags::empty(),
-                render_pass: present_render_pass.get_render_pass(),
-                attachment_count: attachments.len() as u32,
-                p_attachments: attachments.as_ptr(),
-                width: extent.width,
-                height: extent.height,
-                layers: 1,
-            };
-
-            let framebuffer = unsafe {
-                device.get_device()
-                    .create_framebuffer(&framebuffer_create_info, None)
-                    .expect("Failed to create Framebuffer!")
-            };
-
-            framebuffers.push(framebuffer);
-        }
+        let depth_format = Self::optimal_depth_format(instance, physical_device);
 
         RcCell::new(VkSwapchain {
             device: device,
 
             swapchain_loader: swapchain_loader,
             swapchain: swapchain,
-            swapchain_format: surface_format.format,
+            color_format: surface_format.format,
+            depth_format: depth_format,
             swapchain_extent: extent,
             _swapchain_images: swapchain_images,
             swapchain_imageviews: swapchain_imageviews,
-            depth_img: depth_img,
+            depth_img: None,
 
-            framebuffers: framebuffers,
+            framebuffers: Vec::new(),
 
-            present_render_pass: present_render_pass,
             image_available_semaphores: image_available_semaphores,
             render_finished_semaphores: render_finished_semaphores,
             inflight_fences: inflight_fences.try_into().unwrap_or_else(|_| panic!("")),
@@ -180,6 +139,52 @@ impl VkSwapchain {
             current_frame: 0,
             current_img: 0
         })
+    }
+
+    pub fn build_framebuffers(&mut self,
+        physical_device: &VkPhysicalDevice,
+        render_pass: Rc<VkRenderPass>,
+        render_img: RcCell<VkImage>
+    ) {
+        assert_eq!(self.framebuffers.len(), 0, "Failed to build framebuffers. (Framebuffers can only be build once)");
+
+        let mut depth_img = VkImage::new(
+            self.device.clone(),
+            self.swapchain_extent.width, self.swapchain_extent.height,
+            1,
+            self.depth_format,
+            render_img.as_ref().sample_count(),
+            vk::ImageTiling::OPTIMAL,
+            vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
+            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            physical_device.get_mem_properties()
+        );
+        
+        for &image_view in self.swapchain_imageviews.iter() {
+            let attachments = [render_img.as_mut().get_image_view(), depth_img.get_image_view(), image_view];
+
+            let framebuffer_create_info = vk::FramebufferCreateInfo {
+                s_type: vk::StructureType::FRAMEBUFFER_CREATE_INFO,
+                p_next: std::ptr::null(),
+                flags: vk::FramebufferCreateFlags::empty(),
+                render_pass: render_pass.get_render_pass(),
+                attachment_count: attachments.len() as u32,
+                p_attachments: attachments.as_ptr(),
+                width: self.swapchain_extent.width,
+                height: self.swapchain_extent.height,
+                layers: 1,
+            };
+
+            let framebuffer = unsafe {
+                self.device.get_device()
+                    .create_framebuffer(&framebuffer_create_info, None)
+                    .expect("Failed to create Framebuffer!")
+            };
+
+            self.framebuffers.push(framebuffer);
+        }
+
+        self.depth_img = Some(depth_img);
     }
 
     pub fn query_swapchain_support(
@@ -310,8 +315,12 @@ impl VkSwapchain {
         &self.swapchain_extent
     }
 
-    pub fn get_format(&self) -> vk::Format {
-        self.swapchain_format
+    pub fn get_color_format(&self) -> vk::Format {
+        self.color_format
+    }
+
+    pub fn get_depth_format(&self) -> vk::Format {
+        self.depth_format
     }
 
     pub fn get_current_framebuffer(&self) -> &vk::Framebuffer {
@@ -320,10 +329,6 @@ impl VkSwapchain {
 
     pub fn get_framebuffer_count(&self) -> usize {
         self.framebuffers.len()
-    }
-
-    pub fn get_render_pass(&self) -> Rc<VkRenderPass> { // temporary!!!
-        self.present_render_pass.clone()
     }
 
     pub fn next_image(&mut self) {

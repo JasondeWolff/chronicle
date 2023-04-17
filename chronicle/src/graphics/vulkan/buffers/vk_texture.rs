@@ -41,6 +41,7 @@ impl VkTexture {
             image_width, image_height,
             mip_levels,
             vk::Format::R8G8B8A8_UNORM,
+            vk::SampleCountFlags::TYPE_1,
             vk::ImageTiling::OPTIMAL,
             vk::ImageUsageFlags::TRANSFER_SRC | vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
