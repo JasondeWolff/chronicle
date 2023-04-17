@@ -1,8 +1,8 @@
-use std::{rc::Rc, ptr::swap};
+use std::rc::Rc;
 
 use ash::vk;
 
-use cgmath::{Deg, Matrix4, Point3, Vector3, Zero};
+use cgmath::{Deg, Matrix4, Point3, Vector3};
 
 use crate::resources::{Model, Resource};
 pub(crate) use crate::common::RcCell;
@@ -18,6 +18,8 @@ use vulkan::*;
 
 // TODO:
 // [X] MSAA
+// [X] Push constants
+// [ ] Camera struct & Input handling
 // [ ] multiple objects
 // [ ] materials
 // [ ] imgui
@@ -28,7 +30,7 @@ pub struct DynamicRenderModelProperties {
 }
 
 pub struct DynamicRenderModel {
-    model_resource: Resource<Model>,
+    _model_resource: Resource<Model>,
     vk_meshes: Vec<VkMesh>,
     vk_textures: Vec<VkTexture>,
     vk_samplers: Vec<VkSampler>,
@@ -69,7 +71,6 @@ pub struct Renderer {
     app: RcCell<VkApp>,
 
     render_img: RcCell<VkImage>,
-    msaa_samples: vk::SampleCountFlags,
     render_pass: Rc<VkRenderPass>,
     pipeline: Rc<VkPipeline>,
 
@@ -149,7 +150,6 @@ impl Renderer {
         Box::new(Renderer {
             app: RcCell::new(app),
             render_img: render_img,
-            msaa_samples: max_sample_count,
             render_pass: render_pass,
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
@@ -326,7 +326,7 @@ impl Renderer {
         )];
 
         let dynamic_render_model = DynamicRenderModel {
-            model_resource: model_resource,
+            _model_resource: model_resource,
             vk_meshes: meshes,
             vk_textures: textures,
             vk_samplers: samplers,

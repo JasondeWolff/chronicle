@@ -15,7 +15,7 @@ pub struct VkCmdQueue {
     desc_pool: Rc<VkDescriptorPool>,
     queue: vk::Queue,
     cmd_pool: Rc<VkCmdPool>,
-    queue_type: VkQueueType,
+    _queue_type: VkQueueType,
 
     busy_cmd_buffers: VecDeque<InFlightCmdBuffer>,
     idle_cmd_buffers: VecDeque<RcCell<VkCmdBuffer>>
@@ -40,7 +40,7 @@ impl VkCmdQueue {
             desc_pool: desc_pool,
             queue: queue,
             cmd_pool: cmd_pool,
-            queue_type: queue_type,
+            _queue_type: queue_type,
             busy_cmd_buffers: VecDeque::new(),
             idle_cmd_buffers: VecDeque::new()
         }

@@ -1,6 +1,4 @@
-use ash::vk;
-
-use std::{rc::Rc, collections::HashMap, hash::Hash};
+use std::{rc::Rc, collections::HashMap};
 
 pub use super::window::*;
 
