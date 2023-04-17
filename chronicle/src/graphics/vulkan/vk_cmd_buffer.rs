@@ -642,6 +642,27 @@ impl VkCmdBuffer {
                 );
         }
     }
+
+    pub fn push_constant<T: Sized>(&self, constant: &T, stage_flags: vk::ShaderStageFlags) {
+        let pipeline = self.pipeline.as_ref()
+                                        .expect("Failed to push constant. (No pipeline bound)").as_ref();
+
+        unsafe {
+            let bytes = core::slice::from_raw_parts(
+                (constant as *const T) as *const u8,
+                core::mem::size_of::<T>()
+            );
+
+            self.device.get_device()
+                .cmd_push_constants(
+                    self.cmd_buffer,
+                    pipeline.get_layout(),
+                    stage_flags,
+                    0,
+                    bytes
+                );
+        }
+    }
 }
 
 impl Drop for VkCmdBuffer {

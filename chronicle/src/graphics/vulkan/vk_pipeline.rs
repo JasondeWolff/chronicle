@@ -15,6 +15,7 @@ impl VkPipeline {
         extent: &vk::Extent2D,
         render_pass: &VkRenderPass,
         desc_layouts: &Vec<&VkDescriptorSetLayout>,
+        push_constants: &Vec<vk::PushConstantRange>,
         shaders: &Vec<String>
     ) -> Rc<Self> {
         let main_function_name = std::ffi::CString::new("main").unwrap();
@@ -173,8 +174,8 @@ impl VkPipeline {
             flags: vk::PipelineLayoutCreateFlags::empty(),
             set_layout_count: desc_layouts.len() as u32,
             p_set_layouts: set_layouts.as_ptr(),
-            push_constant_range_count: 0,
-            p_push_constant_ranges: ptr::null(),
+            push_constant_range_count: push_constants.len() as u32,
+            p_push_constant_ranges: push_constants.as_ptr(),
         };
 
         let pipeline_layout = unsafe {

@@ -16,7 +16,11 @@ mod vulkan;
 use vulkan::*;
 
 
-// TODO: MSAA, multiple objects, materials, imgui
+// TODO:
+// [X] MSAA
+// [ ] multiple objects
+// [ ] materials
+// [ ] imgui
 
 #[derive(Debug, Clone, Copy)]
 pub struct DynamicRenderModelProperties {
@@ -43,17 +47,22 @@ impl DynamicRenderModel {
     }
 }
 
-#[repr(C)]
-struct UBO {
-    model: Matrix4<f32>,
-    view: Matrix4<f32>,
-    proj: Matrix4<f32>
-}
+// #[repr(C)]
+// struct UBO {
+//     model: Matrix4<f32>,
+//     view: Matrix4<f32>,
+//     proj: Matrix4<f32>
+// }
 
-impl ToAny for UBO {
-    fn as_any(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
+// impl ToAny for UBO {
+//     fn as_any(&mut self) -> &mut dyn std::any::Any {
+//         self
+//     }
+// }
+
+#[repr(C)]
+struct MVP {
+    mvp: Matrix4<f32>
 }
 
 pub struct Renderer {
@@ -104,13 +113,13 @@ impl Renderer {
         );
 
         let descriptor_layout = VkDescriptorSetLayout::new(device.clone(), &vec![
-            vk::DescriptorSetLayoutBinding {
-                binding: 0,
-                descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
-                descriptor_count: 1,
-                stage_flags: vk::ShaderStageFlags::VERTEX,
-                p_immutable_samplers: std::ptr::null(),
-            },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 0,
+            //     descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::VERTEX,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
             vk::DescriptorSetLayoutBinding {
                 binding: 1,
                 descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
@@ -119,11 +128,21 @@ impl Renderer {
                 p_immutable_samplers: std::ptr::null(),
             },
         ]);
+        
+        let push_constants = vec![
+            vk::PushConstantRange {
+                stage_flags: vk::ShaderStageFlags::VERTEX,
+                offset: 0,
+                size: std::mem::size_of::<MVP>() as u32
+            }
+        ];
+
         let pipeline = VkPipeline::new(
             device.clone(),
             swapchain.get_extent(),
             &render_pass,
             &vec![&descriptor_layout],
+            &push_constants,
             &vec![String::from("shader.vert"), String::from("shader.frag")]
         );
 
@@ -165,22 +184,34 @@ impl Renderer {
                 swapchain.next_image();
             }
             
-            let uniform_buffer = app.uniform_buffer::<UBO>("matrices"); {
-                let mut uniform_buffer = uniform_buffer.as_mut();
-                let ubo: &mut UBO = uniform_buffer.data();
-                ubo.model = Matrix4::from_angle_y(Deg(45.0 * crate::app().time()));
-                ubo.view = Matrix4::look_at(
-                    Point3::new(2.0, 0.0, 2.0),
-                    Point3::new(0.0, 0.0, 0.0),
-                    Vector3::new(0.0, 1.0, 0.0),
-                );
-                ubo.proj = cgmath::perspective(
-                    Deg(60.0),
-                    crate::app().window().width() as f32 / crate::app().window().height() as f32,
-                    0.1,
-                    20.0,
-                );
-            }
+            // let uniform_buffer = app.uniform_buffer::<UBO>("matrices"); {
+            //     let mut uniform_buffer = uniform_buffer.as_mut();
+            //     let ubo: &mut UBO = uniform_buffer.data();
+            //     ubo.model = Matrix4::from_angle_y(Deg(45.0 * crate::app().time()));
+            //     ubo.view = Matrix4::look_at(
+            //         Point3::new(2.0, 0.0, 2.0),
+            //         Point3::new(0.0, 0.0, 0.0),
+            //         Vector3::new(0.0, 1.0, 0.0),
+            //     );
+            //     ubo.proj = cgmath::perspective(
+            //         Deg(60.0),
+            //         crate::app().window().width() as f32 / crate::app().window().height() as f32,
+            //         0.1,
+            //         20.0,
+            //     );
+            // }
+
+            let view_matrix = Matrix4::look_at(
+                Point3::new(2.0, 0.0, 2.0),
+                Point3::new(0.0, 0.0, 0.0),
+                Vector3::new(0.0, 1.0, 0.0),
+            );
+            let proj_matrix = cgmath::perspective(
+                Deg(60.0),
+                crate::app().window().width() as f32 / crate::app().window().height() as f32,
+                0.1,
+                20.0,
+            );
 
             let cmd_queue = app.get_cmd_queue();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
@@ -195,12 +226,22 @@ impl Renderer {
                 cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
 
                 cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
-                cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer.clone());
+                //cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer.clone());
                 let dynamic_model = &mut self.dynamic_models[0];
                 cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, &dynamic_model.vk_samplers[0], &mut dynamic_model.vk_textures[0]);
                 cmd_buffer.bind_desc_sets();
+                
+                let model_matrix = Matrix4::from_angle_y(Deg(45.0 * crate::app().time()));
+                cmd_buffer.push_constant(
+                    &MVP {
+                        mvp: proj_matrix * view_matrix * model_matrix
+                    },
+                    vk::ShaderStageFlags::VERTEX
+                );
 
                 for dynamic_model in self.dynamic_models.iter() {
+                    
+
                     dynamic_model.draw(&cmd_buffer);
                 }
                 cmd_buffer.end_render_pass();
