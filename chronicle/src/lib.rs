@@ -11,12 +11,13 @@ pub use std::cell::{RefCell, Ref, RefMut};
 pub mod core_loop;
 pub use core_loop::CoreLoop;
 
+pub mod window;
+pub use window::Window;
 pub mod graphics;
 pub mod resources;
-pub mod system;
+pub mod input;
 
 use common::Timer;
-use system::System;
 
 #[thread_local]
 static mut APP: Option<Box<App>> = None;
@@ -43,9 +44,10 @@ pub trait Game {
 }
 
 pub struct App {
-    window: Option<Box<graphics::Window>>,
+    window: Option<Box<Window>>,
     graphics: Option<Box<graphics::Renderer>>,
     resources: Option<Box<resources::Resources>>,
+    input: Option<Box<input::Input>>,
     game_timer: Timer,
     delta_timer: Timer,
     running: bool,
@@ -58,6 +60,7 @@ impl App {
             window: None,
             graphics: None,
             resources: None,
+            input: None,
             game_timer: Timer::new(),
             delta_timer: Timer::new(),
             running: false,
@@ -68,14 +71,19 @@ impl App {
     }
 
     fn init_window(&mut self, title: &'static str, core_loop: &CoreLoop) {
-        self.window = Some(graphics::Window::new(core_loop, title, 1280, 720));
+        self.window = Some(Window::new(core_loop, title, 1280, 720));
     }
 
     fn init_systems(&mut self) {
         self.resources = Some(resources::Resources::init());
         self.graphics = Some(graphics::Renderer::init(&self.window()));
+        self.input = Some(input::Input::init());
 
         self.game.start();
+    }
+
+    pub(crate) fn is_init(&self) -> bool {
+        self.input.is_some()
     }
 
     pub(crate) fn update(&mut self) {
@@ -90,6 +98,7 @@ impl App {
 
         self.graphics().update();
         self.resources().update();
+        self.input().update();
     }
 
     pub fn quit(&mut self) {
@@ -103,7 +112,7 @@ impl App {
         self.game_timer.elapsed()
     }
 
-    pub fn window(&mut self) -> &mut graphics::Window {
+    pub fn window(&mut self) -> &mut Window {
         self.window.as_mut().unwrap().as_mut()
     }
 
@@ -113,5 +122,9 @@ impl App {
 
     pub fn resources(&mut self) -> &mut resources::Resources {
         self.resources.as_mut().unwrap().as_mut()
+    }
+
+    pub fn input(&mut self) -> &mut input::Input {
+        self.input.as_mut().unwrap().as_mut()
     }
 }

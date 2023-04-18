@@ -2,6 +2,7 @@ extern crate chronicle;
 use chronicle::{app, graphics};
 use chronicle::{CoreLoop, Game, RcCell};
 use chronicle::resources::{Resource, Model};
+use chronicle::input::{VirtualKeyCode, MouseButton};
 
 use chronicle::Vector3;
 

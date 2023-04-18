@@ -1,6 +1,6 @@
 use std::{rc::Rc, collections::HashMap};
 
-pub use super::window::*;
+use crate::Window;
 
 pub mod vk_device;
 pub use vk_device::*;

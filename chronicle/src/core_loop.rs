@@ -1,5 +1,6 @@
 use winit::event::{Event, VirtualKeyCode, ElementState, KeyboardInput, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
+use cgmath::Vector2;
 
 use crate::app;
 
@@ -22,40 +23,54 @@ impl CoreLoop {
 
     pub fn run(self) {
         self.event_loop.run(move |event, _, control_flow| {
-            match event {
-                | Event::WindowEvent { event, .. } => {
-                    match event {
-                        | WindowEvent::CloseRequested => {
-                            *control_flow = ControlFlow::Exit
-                        },
-                        | WindowEvent::Resized(size) => {
-                            app().graphics().resize(size.width, size.height);
-                        },
-                        | WindowEvent::KeyboardInput { input, .. } => {
-                            match input {
-                                | KeyboardInput { virtual_keycode, state, .. } => {
-                                    match (virtual_keycode, state) {
-                                        | (Some(VirtualKeyCode::Escape), ElementState::Pressed) => {
-                                            *control_flow = ControlFlow::Exit
-                                        },
-                                        | _ => {},
-                                    }
-                                },
+            let app = app();
+            if app.is_init() {
+                match event {
+                    | Event::WindowEvent { event, .. } => {
+                        match event {
+                            | WindowEvent::CloseRequested => {
+                                *control_flow = ControlFlow::Exit
+                            },
+                            | WindowEvent::Resized(size) => {
+                                app.graphics().resize(size.width, size.height);
+                            },
+                            | WindowEvent::KeyboardInput { input, .. } => {
+                                match input {
+                                    | KeyboardInput { virtual_keycode, state, .. } => {
+                                        match (virtual_keycode, state) {
+                                            | (Some(VirtualKeyCode::Escape), ElementState::Pressed) => {
+                                                *control_flow = ControlFlow::Exit
+                                            },
+                                            | (Some(virtual_keycode), state) => {
+                                                app.input().set_key(virtual_keycode, state == ElementState::Pressed);
+                                            },
+                                            | _ => {}
+                                        }
+                                    },
+                                }
+                            },
+                            | WindowEvent::MouseInput { state, button, .. } => {
+                                app.input().set_mouse_button(button, state == ElementState::Pressed);
+                            },
+                            | WindowEvent::CursorMoved { position, .. } => {
+                                app.input().set_mouse_pos(Vector2::new(position.x, position.y));
                             }
-                        },
-                        | _ => {},
-                    }
-                },
-                | Event::MainEventsCleared => {
-                    app().window().get_winit_window().request_redraw();
-                },
-                | Event::RedrawRequested(_window_id) => {
-                    app().update();
-                },
-                | Event::LoopDestroyed => {
-                    app().graphics().wait_idle();
-                },
-                _ => (),
+                            | _ => {},
+                        }
+                    },
+                    | Event::MainEventsCleared => {
+                        app.window().get_winit_window().request_redraw();
+                    },
+                    | Event::RedrawRequested(_window_id) => {
+                        app.update();
+                    },
+                    | Event::LoopDestroyed => {
+                        app.graphics().wait_idle();
+                    },
+                    _ => (),
+                }
+            } else {
+                app.update();
             }
         })
     }

@@ -4,14 +4,13 @@ use ash::vk;
 
 use cgmath::{Deg, Matrix4, Point3, Vector3};
 
+use crate::Window;
 use crate::resources::{Model, Resource};
-pub(crate) use crate::common::RcCell;
-use crate::vec_remove_multiple;
+use crate::common::{RcCell, vec_remove_multiple};
 
 pub mod transform;
 pub use transform::*;
-pub mod window;
-pub use window::*;
+
 mod vulkan;
 use vulkan::*;
 
