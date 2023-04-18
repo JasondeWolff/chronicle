@@ -13,22 +13,13 @@ pub struct DynamicRenderModelProperties {
 }
 
 pub(super) struct DynamicRenderModel {
-    pub(super) _model_resource: Resource<Model>,
-    pub(super) vk_meshes: Vec<VkMesh>,
-    pub(super) vk_textures: Vec<VkTexture>,
-    pub(super) vk_samplers: Vec<VkSampler>,
+    pub(super) model_resource: Resource<Model>,
     pub(super) properties: RcCell<DynamicRenderModelProperties>
 }
 
 impl DynamicRenderModel {
     pub(super) fn is_active(&self) -> bool {
         self.properties.strong_count() > 1
-    }
-
-    pub(super) fn draw(&self, cmd_buffer: &VkCmdBuffer) {
-        for mesh in self.vk_meshes.iter() {
-            mesh.draw_cmds(cmd_buffer);
-        }
     }
 }
 

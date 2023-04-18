@@ -9,12 +9,13 @@ pub use camera::*;
 mod vulkan;
 use vulkan::*;
 
+use std::collections::HashMap;
 use std::rc::Rc;
 use ash::vk;
-use cgmath::{Deg, Matrix4, Point3, Vector3};
+use cgmath::{Deg, Matrix4};
 
 use crate::Window;
-use crate::resources::{Model, Resource};
+use crate::resources::{Model, Resource, Mesh, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
 // TODO:
@@ -51,6 +52,10 @@ pub struct Renderer {
     pipeline: Rc<VkPipeline>,
 
     descriptor_layout: Rc<VkDescriptorSetLayout>,
+
+    models: HashMap<Resource<Model>, Vec<VkMesh>>,
+    textures: HashMap<Resource<Texture>, VkTexture>,
+    samplers: HashMap<u32, VkSampler>,
 
     cameras: Vec<RenderCamera>,
     dynamic_models: Vec<DynamicRenderModel>
@@ -105,6 +110,34 @@ impl Renderer {
                 stage_flags: vk::ShaderStageFlags::FRAGMENT,
                 p_immutable_samplers: std::ptr::null(),
             },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 2,
+            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 3,
+            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 4,
+            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
+            // vk::DescriptorSetLayoutBinding {
+            //     binding: 5,
+            //     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+            //     descriptor_count: 1,
+            //     stage_flags: vk::ShaderStageFlags::FRAGMENT,
+            //     p_immutable_samplers: std::ptr::null(),
+            // },
         ]);
         
         let push_constants = vec![
@@ -130,6 +163,10 @@ impl Renderer {
             render_pass: render_pass,
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
+
+            models: HashMap::new(),
+            textures: HashMap::new(),
+            samplers: HashMap::new(),
 
             cameras: Vec::new(),
             dynamic_models: Vec::new()
@@ -190,21 +227,15 @@ impl Renderer {
             //     );
             // }
 
-            // let view_matrix = Matrix4::look_at(
-            //     Point3::new(2.0, 0.0, 2.0),
-            //     Point3::new(0.0, 0.0, 0.0),
-            //     Vector3::new(0.0, 1.0, 0.0),
-            // );
-            // let proj_matrix = cgmath::perspective(
-            //     Deg(60.0),
-            //     crate::app().window().width() as f32 / crate::app().window().height() as f32,
-            //     0.1,
-            //     20.0,
-            // );
-
-            let camera = &mut self.cameras[0].properties.as_mut().camera;
-            let view_matrix = *camera.get_view_matrix();
-            let proj_matrix = *camera.get_proj_matrix();
+            let mut main_camera = None;
+            for camera in &self.cameras {
+                if camera.properties.as_ref().main {
+                    main_camera = Some(camera.properties.clone());
+                }
+            }
+            let main_camera = &mut main_camera.as_ref().expect("Failed to find main camera.").as_mut().camera;
+            let view_matrix = *main_camera.get_view_matrix();
+            let proj_matrix = *main_camera.get_proj_matrix();
 
             let cmd_queue = app.get_cmd_queue();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
@@ -218,24 +249,35 @@ impl Renderer {
                 
                 cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
 
-                cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
-                //cmd_buffer.set_desc_buffer(0, 0, vk::DescriptorType::UNIFORM_BUFFER, uniform_buffer.clone());
-                let dynamic_model = &mut self.dynamic_models[0];
-                cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, &dynamic_model.vk_samplers[0], &mut dynamic_model.vk_textures[0]);
-                cmd_buffer.bind_desc_sets();
-                
-                let model_matrix = Matrix4::from_angle_y(Deg(45.0 * crate::app().time()));
-                cmd_buffer.push_constant(
-                    &MVP {
-                        mvp: proj_matrix * view_matrix * model_matrix
-                    },
-                    vk::ShaderStageFlags::VERTEX
-                );
-
                 for dynamic_model in self.dynamic_models.iter() {
-                    
+                    let mut model_properties = dynamic_model.properties.as_mut();
+                    let model_matrix = model_properties.transform.get_matrix(false);
+                    cmd_buffer.push_constant(
+                        &MVP {
+                            mvp: proj_matrix * view_matrix * model_matrix
+                        },
+                        vk::ShaderStageFlags::VERTEX
+                    );
 
-                    dynamic_model.draw(&cmd_buffer);
+                    let vk_meshes = self.models.get(&dynamic_model.model_resource).unwrap();
+                    for (i, mesh) in dynamic_model.model_resource.as_ref().meshes.iter().enumerate() {
+                        let material = dynamic_model.model_resource.as_ref().materials[mesh.material_idx].clone();
+                        let material = material.as_ref();
+
+                        cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
+
+                        let base_color_texture = self.textures.get_mut(&material.base_color_texture);
+                        if let Some(texture) = base_color_texture {
+                            let sampler = self.samplers.get(&texture.mip_levels()).unwrap();
+                            cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, sampler, texture);
+                        }
+
+                        cmd_buffer.bind_desc_sets();
+
+                        vk_meshes[i].draw_cmds(&cmd_buffer);
+                    }
+                    
+                    
                 }
                 cmd_buffer.end_render_pass();
                 cmd_buffer.end();
@@ -304,38 +346,57 @@ impl Renderer {
         properties
     }
 
+    fn store_texture(&mut self, texture_resource: Resource<Texture>) {
+        if self.textures.get(&texture_resource).is_none() {
+            let texture = VkTexture::new(
+                self.app.clone(),
+                texture_resource.clone()
+            );
+
+            if self.samplers.get(&texture.mip_levels()).is_none() {
+                self.samplers.insert(
+                    texture.mip_levels(),
+                    VkSampler::new(
+                        self.app.as_ref().get_device(),
+                        &texture
+                    )
+                );
+            }
+
+            self.textures.insert(
+                texture_resource,
+                texture
+            );
+        }
+    }
+
     pub fn create_dynamic_model(&mut self, model_resource: Resource<Model>) -> RcCell<DynamicRenderModelProperties> {
         let properties = RcCell::new(DynamicRenderModelProperties {
             transform: Transform::new()
         });
 
-        let mut meshes = Vec::new();
-        for mesh in model_resource.as_ref().meshes.iter() {
-            meshes.push(VkMesh::new(
-                self.app.clone(),
-                &mesh.vertices,
-                &mesh.indices
-            ));
+        if self.models.get(&model_resource).is_none() {
+            let mut meshes = Vec::new();
+            for mesh in model_resource.as_ref().meshes.iter() {
+                meshes.push(VkMesh::new(
+                    self.app.clone(),
+                    &mesh.vertices,
+                    &mesh.indices
+                ));
+            }
+            self.models.insert(model_resource.clone(), meshes);
         }
 
-        let mut textures = Vec::new();
-        for material in model_resource.as_ref().materials.iter() {
-            textures.push(VkTexture::new(
-                self.app.clone(),
-                material.as_ref().base_color_texture.clone()
-            ));
+        for material in &model_resource.as_ref().materials {
+            self.store_texture(material.as_ref().base_color_texture.clone());
+            self.store_texture(material.as_ref().normal_texture.clone());
+            self.store_texture(material.as_ref().metallic_roughness_texture.clone());
+            self.store_texture(material.as_ref().occlusion_texture.clone());
+            self.store_texture(material.as_ref().emissive_texture.clone());
         }
-
-        let samplers = vec![VkSampler::new( // HARDCODED!!!!
-            self.app.as_ref().get_device(),
-            &textures[0]
-        )];
 
         let dynamic_render_model = DynamicRenderModel {
-            _model_resource: model_resource,
-            vk_meshes: meshes,
-            vk_textures: textures,
-            vk_samplers: samplers,
+            model_resource: model_resource,
             properties: properties.clone()
         };
         self.dynamic_models.push(dynamic_render_model);

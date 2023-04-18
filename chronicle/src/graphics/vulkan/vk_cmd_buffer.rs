@@ -16,12 +16,13 @@ pub struct VkCmdBuffer {
     cmd_buffer: vk::CommandBuffer,
 
     desc_pool: Rc<VkDescriptorPool>,
-    desc_sets: HashMap<u32, VkDescriptorSet>,
+    desc_sets: HashMap<u32, Rc<VkDescriptorSet>>,
     desc_layouts: HashMap<u32, Rc<VkDescriptorSetLayout>>,
 
     pipeline: Option<Rc<VkPipeline>>,
 
-    tracked_buffers: Vec<Rc<VkBuffer>>
+    tracked_buffers: Vec<Rc<VkBuffer>>,
+    tracked_desc_sets: Vec<Rc<VkDescriptorSet>>,
 }
 
 impl VkCmdBuffer {
@@ -52,7 +53,8 @@ impl VkCmdBuffer {
             desc_sets: HashMap::new(),
             desc_layouts: HashMap::new(),
             pipeline: None,
-            tracked_buffers: Vec::new()
+            tracked_buffers: Vec::new(),
+            tracked_desc_sets: Vec::new()
         }
     }
 
@@ -63,9 +65,9 @@ impl VkCmdBuffer {
     pub fn reset(&mut self) {
         unsafe {
             self.pipeline = None;
-            self.desc_sets.clear();
             self.desc_layouts.clear();
             self.tracked_buffers.clear();
+            self.tracked_desc_sets.clear();
 
             self.device.get_device()
                 .reset_command_buffer(
@@ -578,7 +580,7 @@ impl VkCmdBuffer {
         texture: &mut VkTexture
     ) {
         let desc_layout = self.desc_layouts.get(&set)
-                                                                    .expect("Failed to set desc buffer. (Missing desc layout_");
+            .expect("Failed to set desc buffer. (Missing desc layout)");
 
         let desc_set = match self.desc_sets.get(&set) {
             Some(desc_set) => desc_set,
@@ -621,7 +623,7 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn bind_desc_sets(&self) {
+    pub fn bind_desc_sets(&mut self) {
         let mut sorted_desc_sets: Vec<_> = self.desc_sets.iter().collect();
         sorted_desc_sets.sort_by(|x, y| x.0.cmp(&y.0));
 
@@ -641,6 +643,11 @@ impl VkCmdBuffer {
                     &[]
                 );
         }
+
+        for desc_set in sorted_desc_sets {
+            self.tracked_desc_sets.push(desc_set.1.clone());
+        }
+        self.desc_sets.clear();
     }
 
     pub fn push_constant<T: Sized>(&self, constant: &T, stage_flags: vk::ShaderStageFlags) {

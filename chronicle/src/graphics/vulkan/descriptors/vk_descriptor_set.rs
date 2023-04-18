@@ -16,7 +16,7 @@ impl VkDescriptorSet {
         desc_pool: Rc<VkDescriptorPool>,
         desc_layout: Rc<VkDescriptorSetLayout>,
         _desc_type: vk::DescriptorType
-    ) -> Self {
+    ) -> Rc<Self> {
         let desc_layouts = [desc_layout.get_desc_layout()];
 
         let descriptor_set_allocate_info = vk::DescriptorSetAllocateInfo {
@@ -33,11 +33,11 @@ impl VkDescriptorSet {
                 .expect("Failed to allocate descriptor sets.")
         };
 
-        VkDescriptorSet {
+        Rc::new(VkDescriptorSet {
             device: device,
             desc_pool: desc_pool,
             descriptor_set: descriptor_sets[0]
-        }
+        })
     }
 
     pub fn get_desc_set(&self) -> vk::DescriptorSet {

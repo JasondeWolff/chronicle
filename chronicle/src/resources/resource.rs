@@ -1,21 +1,50 @@
 pub use std::rc::Rc;
 pub use std::cell::{RefCell, Ref, RefMut};
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone)]
 pub struct Resource<T> {
-    value: Option<Rc<RefCell<T>>>
+    value: Option<Rc<RefCell<T>>>,
+    path: String
+}
+
+impl<T> Hash for Resource<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        if let Some(value) = &self.value {
+            value.as_ptr().hash(state);
+        }
+    }
+}
+
+impl<T> PartialEq for Resource<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if let Some(value) = &self.value {
+            if let Some(value2) = &other.value {
+                return value.as_ptr() == value2.as_ptr();
+            }
+        }
+        false
+    }
+}
+
+impl<T> Eq for Resource<T> {
+    fn assert_receiver_is_total_eq(&self) {
+        
+    }
 }
 
 impl<T> Resource<T> {
-    pub fn new(value: T) -> Self {
+    pub fn new(value: T, path: String) -> Self {
         Resource {
-            value: Some(Rc::new(RefCell::new(value)))
+            value: Some(Rc::new(RefCell::new(value))),
+            path: path
         }
     }
 
     pub fn empty() -> Self {
         Resource {
-            value: None
+            value: None,
+            path: "".to_owned()
         }
     }
 
@@ -55,4 +84,6 @@ impl<T> Resource<T> {
             None => None
         }
     }
+
+     
 }

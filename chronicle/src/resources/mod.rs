@@ -281,10 +281,13 @@ impl Resources {
                     self.process_node(&node, &buffers, &images, &asset_path, &mut meshes, &mut materials);
                 }
 
-                let resource = Resource::new(Model {
-                    meshes: meshes,
-                    materials: materials.into_iter().map(|m| Resource::new(m)).collect()
-                });
+                let resource = Resource::new(
+                    Model {
+                        meshes: meshes,
+                        materials: materials.into_iter().map(|m| Resource::new(m, asset_path.clone() + "_MAT")).collect() // ADD IDX TO NAME!!!
+                    },
+                    asset_path.clone()
+                );
 
                 self.model_manager.insert(resource.clone(), asset_path);
                 resource
@@ -297,7 +300,7 @@ impl Resources {
             Some(resource) => resource,
             None => {
                 let contents = fs::read_to_string(asset_path.clone()).expect(&format!("Failed to read text file at \"{:?}\"", asset_path));
-                let resource = Resource::new(contents);
+                let resource = Resource::new(contents, asset_path.clone());
 
                 self.text_manager.insert(resource.clone(), asset_path);
                 resource
@@ -333,13 +336,16 @@ impl Resources {
 
                     let mip_levels = ((width.max(height) as f32).log2().floor() as u32) + 1;
 
-                    let resource = Resource::new(Texture {
-                        data: data,
-                        width: width as u32,
-                        height: height as u32,
-                        channel_count: 4 as u32,
-                        mip_levels: mip_levels
-                    });
+                    let resource = Resource::new(
+                        Texture {
+                            data: data,
+                            width: width as u32,
+                            height: height as u32,
+                            channel_count: 4 as u32,
+                            mip_levels: mip_levels
+                        },
+                        asset_path.clone()
+                    );
 
                     self.image_manager.insert(resource.clone(), asset_path);
                     resource
@@ -359,7 +365,7 @@ impl Resources {
                     .expect(&format!("Failed to read binary file at \"{:?}\"", asset_path));
                 let bytes_code: Vec<u8> = spv_file.bytes().filter_map(|byte| byte.ok()).collect();
 
-                let resource = Resource::new(bytes_code);
+                let resource = Resource::new(bytes_code, asset_path.clone());
 
                 self.binary_blob_manager.insert(resource.clone(), asset_path);
                 resource
