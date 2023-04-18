@@ -13,7 +13,7 @@ categories = ["graphics", "vulkan", "pathtracing"]
 license = "MIT"
 
 [dependencies]
-winit     = "0.20.0"
+winit     = "0.28.3"
 ash       = "0.37.2"
 num       = "0.2"
 cgmath    = "0.17.0"

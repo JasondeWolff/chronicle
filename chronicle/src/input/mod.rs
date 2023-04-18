@@ -1,8 +1,16 @@
 pub use winit::event::{MouseButton, VirtualKeyCode, ElementState, KeyboardInput, WindowEvent};
 use cgmath::Vector2;
 
+use crate::app;
+
 const MAX_KEYS: usize = 512;
 const MAX_BUTTONS: usize = 32;
+
+#[derive(Copy, Clone, Debug)]
+pub enum CursorMode {
+    FREE,
+    LOCKED
+}
 
 pub struct Input {
     keys: [bool; MAX_KEYS],
@@ -10,7 +18,8 @@ pub struct Input {
     buttons: [bool; MAX_BUTTONS],
     buttons_prev: [bool; MAX_BUTTONS],
     mouse_pos: Vector2<i32>,
-    mouse_pos_prev: Vector2<i32>
+    mouse_delta: Vector2<f32>,
+    cursor_mode: CursorMode
 }
 
 impl Input {
@@ -21,13 +30,15 @@ impl Input {
             buttons: [false; MAX_BUTTONS],
             buttons_prev: [false; MAX_BUTTONS],
             mouse_pos: Vector2::new(0, 0),
-            mouse_pos_prev: Vector2::new(0, 0)
+            mouse_delta: Vector2::new(0.0, 0.0),
+            cursor_mode: CursorMode::FREE
         })
     }
 
     pub(crate) fn update(&mut self) {
         self.keys_prev = self.keys.clone();
         self.buttons_prev = self.buttons.clone();
+        self.mouse_delta = Vector2::new(0.0, 0.0);
     }
 
     pub fn key(&self, key_code: VirtualKeyCode) -> bool {
@@ -50,8 +61,33 @@ impl Input {
         self.mouse_pos
     }
 
-    pub fn mouse_delta(&self) -> Vector2<i32> {
-        self.mouse_pos - self.mouse_pos_prev
+    pub fn mouse_delta(&self) -> Vector2<f32> {
+        self.mouse_delta
+    }
+
+    pub fn get_cursor_mode(&self) -> CursorMode {
+        self.cursor_mode
+    }
+
+    pub fn set_cursor_mode(&mut self, mode: CursorMode) {
+        let window = app().window().get_winit_window();
+
+        match mode {
+            CursorMode::FREE => {
+                window.set_cursor_grab(winit::window::CursorGrabMode::None)
+                    .expect("Failed to free cursor.");
+                window.set_cursor_visible(true);
+            },
+            CursorMode::LOCKED => {
+                let _ = window.set_cursor_grab(winit::window::CursorGrabMode::Confined)
+                    .and_then(|_| {
+                        window.set_cursor_grab(winit::window::CursorGrabMode::Locked)
+                    });
+                window.set_cursor_visible(false);
+            }
+        }
+
+        self.cursor_mode = mode;
     }
 
     pub(crate) fn set_key(&mut self, key_code: VirtualKeyCode, value: bool) {
@@ -66,12 +102,16 @@ impl Input {
         self.mouse_pos = mouse_pos;
     }
 
+    pub(crate) fn set_mouse_delta(&mut self, mouse_delta: Vector2<f32>) {
+        self.mouse_delta = mouse_delta;
+    }
+
     fn mb_to_idx(button: MouseButton) -> usize {
         match button {
             MouseButton::Right => 0,
             MouseButton::Middle => 1,
             MouseButton::Left => 2,
-            MouseButton::Other(i) => (3 + i as usize)
+            MouseButton::Other(i) => 3 + i as usize
         }
     }
 }

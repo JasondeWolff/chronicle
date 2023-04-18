@@ -1,4 +1,4 @@
-use winit::event::{Event, VirtualKeyCode, ElementState, KeyboardInput, WindowEvent};
+use winit::event::{Event, VirtualKeyCode, ElementState, KeyboardInput, WindowEvent, DeviceEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use cgmath::Vector2;
 
@@ -53,7 +53,7 @@ impl CoreLoop {
                                 app.input().set_mouse_button(button, state == ElementState::Pressed);
                             },
                             | WindowEvent::CursorMoved { position, .. } => {
-                                app.input().set_mouse_pos(Vector2::new(position.x, position.y));
+                                app.input().set_mouse_pos(Vector2::new(position.x as i32, position.y as i32));
                             }
                             | _ => {},
                         }
@@ -66,6 +66,14 @@ impl CoreLoop {
                     },
                     | Event::LoopDestroyed => {
                         app.graphics().wait_idle();
+                    },
+                    | Event::DeviceEvent { event, ..} => {
+                        match event {
+                            | DeviceEvent::MouseMotion { delta } => {
+                                app.input().set_mouse_delta(Vector2::new(delta.0 as f32, delta.1 as f32));
+                            },
+                            | _ => {}
+                        }
                     },
                     _ => (),
                 }

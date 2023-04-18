@@ -1,52 +1,29 @@
+pub mod mod_structs;
+pub use mod_structs::*;
+
+pub mod transform;
+pub use transform::*;
+pub mod camera;
+pub use camera::*;
+
+mod vulkan;
+use vulkan::*;
+
 use std::rc::Rc;
-
 use ash::vk;
-
 use cgmath::{Deg, Matrix4, Point3, Vector3};
 
 use crate::Window;
 use crate::resources::{Model, Resource};
 use crate::common::{RcCell, vec_remove_multiple};
 
-pub mod transform;
-pub use transform::*;
-
-mod vulkan;
-use vulkan::*;
-
-
 // TODO:
 // [X] MSAA
 // [X] Push constants
-// [ ] Camera struct & Input handling
+// [X] Camera struct & Input handling
 // [ ] multiple objects
 // [ ] materials
 // [ ] imgui
-
-#[derive(Debug, Clone, Copy)]
-pub struct DynamicRenderModelProperties {
-    pub transform: Transform
-}
-
-pub struct DynamicRenderModel {
-    _model_resource: Resource<Model>,
-    vk_meshes: Vec<VkMesh>,
-    vk_textures: Vec<VkTexture>,
-    vk_samplers: Vec<VkSampler>,
-    properties: RcCell<DynamicRenderModelProperties>
-}
-
-impl DynamicRenderModel {
-    pub fn is_active(&self) -> bool {
-        self.properties.strong_count() > 1
-    }
-
-    pub fn draw(&self, cmd_buffer: &VkCmdBuffer) {
-        for mesh in self.vk_meshes.iter() {
-            mesh.draw_cmds(cmd_buffer);
-        }
-    }
-}
 
 // #[repr(C)]
 // struct UBO {
@@ -75,6 +52,7 @@ pub struct Renderer {
 
     descriptor_layout: Rc<VkDescriptorSetLayout>,
 
+    cameras: Vec<RenderCamera>,
     dynamic_models: Vec<DynamicRenderModel>
 }
 
@@ -153,6 +131,7 @@ impl Renderer {
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
 
+            cameras: Vec::new(),
             dynamic_models: Vec::new()
         })
     }
@@ -160,18 +139,29 @@ impl Renderer {
     pub(crate) fn update(&mut self) {
         self.app.as_mut().update();
 
-        self.remove_unused_models();
+        self.remove_unused_resources();
         self.render();
     }
 
-    fn remove_unused_models(&mut self) {
-        let mut indices_to_remove = Vec::new();
-        for (i, dynamic_model) in self.dynamic_models.iter().enumerate() {
-            if !dynamic_model.is_active() {
-                indices_to_remove.push(i);
+    fn remove_unused_resources(&mut self) {
+        { // Cameras
+            let mut indices_to_remove = Vec::new();
+            for (i, camera) in self.cameras.iter().enumerate() {
+                if !camera.is_active() {
+                    indices_to_remove.push(i);
+                }
             }
+            vec_remove_multiple(&mut self.dynamic_models, &mut indices_to_remove);
         }
-        vec_remove_multiple(&mut self.dynamic_models, &mut indices_to_remove);
+        { // Dynamic models
+            let mut indices_to_remove = Vec::new();
+            for (i, dynamic_model) in self.dynamic_models.iter().enumerate() {
+                if !dynamic_model.is_active() {
+                    indices_to_remove.push(i);
+                }
+            }
+            vec_remove_multiple(&mut self.dynamic_models, &mut indices_to_remove);
+        }
     }
 
     fn render(&mut self) {
@@ -200,17 +190,21 @@ impl Renderer {
             //     );
             // }
 
-            let view_matrix = Matrix4::look_at(
-                Point3::new(2.0, 0.0, 2.0),
-                Point3::new(0.0, 0.0, 0.0),
-                Vector3::new(0.0, 1.0, 0.0),
-            );
-            let proj_matrix = cgmath::perspective(
-                Deg(60.0),
-                crate::app().window().width() as f32 / crate::app().window().height() as f32,
-                0.1,
-                20.0,
-            );
+            // let view_matrix = Matrix4::look_at(
+            //     Point3::new(2.0, 0.0, 2.0),
+            //     Point3::new(0.0, 0.0, 0.0),
+            //     Vector3::new(0.0, 1.0, 0.0),
+            // );
+            // let proj_matrix = cgmath::perspective(
+            //     Deg(60.0),
+            //     crate::app().window().width() as f32 / crate::app().window().height() as f32,
+            //     0.1,
+            //     20.0,
+            // );
+
+            let camera = &mut self.cameras[0].properties.as_mut().camera;
+            let view_matrix = *camera.get_view_matrix();
+            let proj_matrix = *camera.get_proj_matrix();
 
             let cmd_queue = app.get_cmd_queue();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
@@ -295,6 +289,19 @@ impl Renderer {
                 self.render_img.clone()
             );
         }
+    }
+
+    pub fn create_camera(&mut self) -> RcCell<RenderCameraProperties> {
+        let properties = RcCell::new(RenderCameraProperties {
+            camera: Camera::new(),
+            main: false
+        });
+
+        self.cameras.push(RenderCamera {
+            properties: properties.clone()
+        });
+
+        properties
     }
 
     pub fn create_dynamic_model(&mut self, model_resource: Resource<Model>) -> RcCell<DynamicRenderModelProperties> {
