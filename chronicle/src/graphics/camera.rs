@@ -49,6 +49,10 @@ impl Camera {
         self.transform.translate(translation);
     }
 
+    pub fn rotate(&mut self, rotation: &Quaternion<f32>) {
+        self.transform.rotate(rotation);
+    }
+
     pub fn get_view_matrix(&mut self) -> &Matrix4<f32> {
         &self.transform.get_matrix(true)
     }

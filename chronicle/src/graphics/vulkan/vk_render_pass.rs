@@ -16,18 +16,21 @@ impl VkRenderPass {
         device: Rc<VkLogicalDevice>,
         color_format: vk::Format,
         depth_format: vk::Format,
-        msaa_samples: vk::SampleCountFlags
+        msaa_samples: vk::SampleCountFlags,
+        load_op: vk::AttachmentLoadOp,
+        initial_layout: vk::ImageLayout,
+        final_layout: vk::ImageLayout
     ) -> Rc<Self> {
         let color_attachment = vk::AttachmentDescription {
             flags: vk::AttachmentDescriptionFlags::empty(),
             format: color_format,
             samples: msaa_samples,
-            load_op: vk::AttachmentLoadOp::CLEAR,
+            load_op: load_op,
             store_op: vk::AttachmentStoreOp::STORE,
             stencil_load_op: vk::AttachmentLoadOp::DONT_CARE,
             stencil_store_op: vk::AttachmentStoreOp::DONT_CARE,
-            initial_layout: vk::ImageLayout::UNDEFINED,
-            final_layout: vk::ImageLayout::PRESENT_SRC_KHR,
+            initial_layout: initial_layout,
+            final_layout: final_layout,
         };
 
         let depth_attachment = vk::AttachmentDescription {

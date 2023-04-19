@@ -35,6 +35,8 @@ pub mod descriptors;
 pub use descriptors::*;
 pub mod vk_sampler;
 pub use vk_sampler::*;
+pub mod vk_imgui;
+pub use vk_imgui::*;
 
 use crate::graphics::*;
 

@@ -5,16 +5,21 @@ use crate::resources::Vertex;
 
 pub struct VkVertex;
 
-impl VkVertex {
-    pub fn get_binding_desc() -> [vk::VertexInputBindingDescription; 1] {
+pub trait VkVertexDescs {
+    fn get_binding_desc() -> Vec<vk::VertexInputBindingDescription>;
+    fn get_attribute_desc() -> Vec<vk::VertexInputAttributeDescription>;
+}
+
+impl VkVertexDescs for VkVertex {
+    fn get_binding_desc() -> Vec<vk::VertexInputBindingDescription> {
         [vk::VertexInputBindingDescription {
             binding: 0,
             stride: std::mem::size_of::<Vertex>() as u32,
             input_rate: vk::VertexInputRate::VERTEX,
-        }]
+        }].to_vec()
     }
 
-    pub fn get_attribute_desc() -> [vk::VertexInputAttributeDescription; 6] {
+    fn get_attribute_desc() -> Vec<vk::VertexInputAttributeDescription> {
         [
             vk::VertexInputAttributeDescription {
                 location: 0,
@@ -52,6 +57,6 @@ impl VkVertex {
                 format: vk::Format::R32G32B32A32_SFLOAT,
                 offset: offset_of!(Vertex, color) as u32,
             }
-        ]
+        ].to_vec()
     }
 }

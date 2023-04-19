@@ -10,13 +10,15 @@ pub struct VkPipeline {
 }
 
 impl VkPipeline {
-    pub fn new(
+    pub fn new<T: VkVertexDescs>(
         device: Rc<VkLogicalDevice>,
         extent: &vk::Extent2D,
         render_pass: &VkRenderPass,
         desc_layouts: &Vec<&VkDescriptorSetLayout>,
         push_constants: &Vec<vk::PushConstantRange>,
-        shaders: &Vec<String>
+        shaders: &Vec<String>,
+        cull_mode: vk::CullModeFlags,
+        depth_test_enable: vk::Bool32
     ) -> Rc<Self> {
         let main_function_name = std::ffi::CString::new("main").unwrap();
 
@@ -36,8 +38,8 @@ impl VkPipeline {
             shader_modules.push(shader_module);
         }
 
-        let binding_description = VkVertex::get_binding_desc();
-        let attribute_description = VkVertex::get_attribute_desc();
+        let binding_description = T::get_binding_desc();
+        let attribute_description = T::get_attribute_desc();
 
         let vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -85,7 +87,7 @@ impl VkPipeline {
             p_next: ptr::null(),
             flags: vk::PipelineRasterizationStateCreateFlags::empty(),
             depth_clamp_enable: vk::FALSE,
-            cull_mode: vk::CullModeFlags::BACK,
+            cull_mode: cull_mode,
             front_face: vk::FrontFace::CLOCKWISE,
             line_width: 1.0,
             polygon_mode: vk::PolygonMode::FILL,
@@ -121,7 +123,7 @@ impl VkPipeline {
             s_type: vk::StructureType::PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineDepthStencilStateCreateFlags::empty(),
-            depth_test_enable: vk::TRUE,
+            depth_test_enable: depth_test_enable,
             depth_write_enable: vk::TRUE,
             depth_compare_op: vk::CompareOp::LESS,
             depth_bounds_test_enable: vk::FALSE,
@@ -132,11 +134,22 @@ impl VkPipeline {
             min_depth_bounds: 0.0,
         };
 
+        // let color_blend_attachment_states = [vk::PipelineColorBlendAttachmentState {
+        //     blend_enable: vk::FALSE,
+        //     color_write_mask: vk::ColorComponentFlags::RGBA,
+        //     src_color_blend_factor: vk::BlendFactor::ONE,
+        //     dst_color_blend_factor: vk::BlendFactor::ZERO,
+        //     color_blend_op: vk::BlendOp::ADD,
+        //     src_alpha_blend_factor: vk::BlendFactor::ONE,
+        //     dst_alpha_blend_factor: vk::BlendFactor::ZERO,
+        //     alpha_blend_op: vk::BlendOp::ADD,
+        // }];
+
         let color_blend_attachment_states = [vk::PipelineColorBlendAttachmentState {
-            blend_enable: vk::FALSE,
+            blend_enable: vk::TRUE,
             color_write_mask: vk::ColorComponentFlags::RGBA,
-            src_color_blend_factor: vk::BlendFactor::ONE,
-            dst_color_blend_factor: vk::BlendFactor::ZERO,
+            src_color_blend_factor: vk::BlendFactor::SRC_ALPHA,
+            dst_color_blend_factor: vk::BlendFactor::ONE_MINUS_SRC_ALPHA,
             color_blend_op: vk::BlendOp::ADD,
             src_alpha_blend_factor: vk::BlendFactor::ONE,
             dst_alpha_blend_factor: vk::BlendFactor::ZERO,

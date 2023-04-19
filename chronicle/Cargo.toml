@@ -21,6 +21,7 @@ memoffset = "0.5.1"
 bitmask-enum = "2.1.0"
 stb_image = "0.2.4"
 gltf = "1.0.0"
+imgui = "0.10.0"
 
 [dependencies.bitflags]
 version = ">= 1.0.4"

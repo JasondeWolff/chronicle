@@ -96,10 +96,16 @@ impl Input {
 
     pub(crate) fn set_mouse_button(&mut self, button: MouseButton, value: bool) {
         self.keys[Self::mb_to_idx(button)] = value;
+
+        let imgui = app().graphics().imgui();
+        imgui.mouse_button_event(winit_to_imgui_mouse_button(button), value);
     }
 
     pub(crate) fn set_mouse_pos(&mut self, mouse_pos: Vector2<i32>) {
         self.mouse_pos = mouse_pos;
+
+        let imgui = app().graphics().imgui();
+        imgui.mouse_pos_event(mouse_pos.x as f32, mouse_pos.y as f32);
     }
 
     pub(crate) fn set_mouse_delta(&mut self, mouse_delta: Vector2<f32>) {
@@ -112,6 +118,20 @@ impl Input {
             MouseButton::Middle => 1,
             MouseButton::Left => 2,
             MouseButton::Other(i) => 3 + i as usize
+        }
+    }
+}
+
+fn winit_to_imgui_mouse_button(button: MouseButton) -> imgui::MouseButton {
+    match button {
+        MouseButton::Left => imgui::MouseButton::Left,
+        MouseButton::Middle => imgui::MouseButton::Middle,
+        MouseButton::Right => imgui::MouseButton::Right,
+        MouseButton::Other(i) => {
+            match i {
+                1 => imgui::MouseButton::Extra1,
+                _ => imgui::MouseButton::Extra2
+            }
         }
     }
 }

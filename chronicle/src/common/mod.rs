@@ -2,6 +2,7 @@ pub mod timer;
 pub use timer::*;
 pub mod rc_cell;
 pub use rc_cell::*;
+
 use cgmath::{Vector3, Quaternion, Matrix4, SquareMatrix, Vector4};
 
 pub fn vec_remove_multiple<T>(vec: &mut Vec<T>, indices: &mut Vec<usize>) {

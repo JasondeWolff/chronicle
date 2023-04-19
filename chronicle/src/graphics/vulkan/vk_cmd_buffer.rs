@@ -7,9 +7,6 @@ use ash::vk;
 
 use crate::graphics::*;
 
-// TODO: find a way to prevent recreating UBO's every single frame
-// track all used resources (eg the copy buffer fn)
-
 pub struct VkCmdBuffer {
     device: Rc<VkLogicalDevice>,
     cmd_pool: Rc<VkCmdPool>,
@@ -101,6 +98,17 @@ impl VkCmdBuffer {
         }
     }
 
+    pub fn set_scissor(&self, scissor: vk::Rect2D) {
+        unsafe {
+            self.device.get_device()
+                .cmd_set_scissor(
+                    self.cmd_buffer, 
+                    0, 
+                    &[scissor]
+                );
+        }
+    }
+
     pub fn set_viewport(&self, extent: &vk::Extent2D) {
         let viewports = [vk::Viewport {
             x: 0.0,
@@ -133,32 +141,47 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain) {
-        let clear_values = [
-            vk::ClearValue {
-                color: vk::ClearColorValue {
-                    float32: [0.0, 0.0, 0.0, 1.0],
+    pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain, clear: bool) {
+        let render_pass_begin_info = if true {
+            let clear_values = [
+                vk::ClearValue {
+                    color: vk::ClearColorValue {
+                        float32: [0.0, 0.0, 0.0, 1.0],
+                    },
                 },
-            },
-            vk::ClearValue {
-                depth_stencil: vk::ClearDepthStencilValue {
-                    depth: 1.0,
-                    stencil: 0,
-                },
-            }
-        ];
+                vk::ClearValue {
+                    depth_stencil: vk::ClearDepthStencilValue {
+                        depth: 1.0,
+                        stencil: 0,
+                    },
+                }
+            ];
 
-        let render_pass_begin_info = vk::RenderPassBeginInfo {
-            s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
-            p_next: ptr::null(),
-            render_pass: render_pass.get_render_pass(),
-            framebuffer: *swapchain.get_current_framebuffer(),
-            render_area: vk::Rect2D {
-                offset: vk::Offset2D { x: 0, y: 0 },
-                extent: *swapchain.get_extent(),
-            },
-            clear_value_count: clear_values.len() as u32,
-            p_clear_values: clear_values.as_ptr(),
+            vk::RenderPassBeginInfo {
+                s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
+                p_next: ptr::null(),
+                render_pass: render_pass.get_render_pass(),
+                framebuffer: *swapchain.get_current_framebuffer(),
+                render_area: vk::Rect2D {
+                    offset: vk::Offset2D { x: 0, y: 0 },
+                    extent: *swapchain.get_extent(),
+                },
+                clear_value_count: clear_values.len() as u32,
+                p_clear_values: clear_values.as_ptr(),
+            }
+        } else {
+            vk::RenderPassBeginInfo {
+                s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
+                p_next: ptr::null(),
+                render_pass: render_pass.get_render_pass(),
+                framebuffer: *swapchain.get_current_framebuffer(),
+                render_area: vk::Rect2D {
+                    offset: vk::Offset2D { x: 0, y: 0 },
+                    extent: *swapchain.get_extent(),
+                },
+                clear_value_count: 0,
+                p_clear_values: std::ptr::null(),
+            }
         };
 
         unsafe {
@@ -190,7 +213,7 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn bind_vertex_buffer(&self, vertex_buffer: &VkVertexBuffer) {
+    pub fn bind_vertex_buffer(&mut self, vertex_buffer: &VkVertexBuffer) {
         unsafe {
             self.device.get_device()
                 .cmd_bind_vertex_buffers(
@@ -200,9 +223,11 @@ impl VkCmdBuffer {
                     &[0_u64]
                 );
         }
+
+        self.tracked_buffers.push(vertex_buffer.track_buffer());
     }
 
-    pub fn bind_index_buffer(&self, index_buffer: &VkIndexBuffer) {
+    pub fn bind_index_buffer(&mut self, index_buffer: &VkIndexBuffer) {
         unsafe {
             self.device.get_device()
                 .cmd_bind_index_buffer(
@@ -212,6 +237,8 @@ impl VkCmdBuffer {
                     vk::IndexType::UINT32
                 );
         }
+
+        self.tracked_buffers.push(index_buffer.track_buffer());
     }
 
     pub fn draw(&self, vertex_count: u32, instance_count: u32, first_vertex: u32, first_instance: u32) {

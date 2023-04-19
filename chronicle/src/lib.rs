@@ -1,5 +1,7 @@
 #![feature(thread_local)]
 
+pub extern crate imgui;
+
 pub use cgmath::*;
 
 pub mod common;
@@ -40,6 +42,7 @@ pub trait Game {
 
     fn start(&mut self);
     fn update(&mut self, delta_time: f32);
+    fn gui(&mut self, gui: &mut graphics::ImGuiUI);
     fn stop(&mut self);
 }
 
@@ -95,6 +98,7 @@ impl App {
         self.delta_timer.reset();
 
         self.game.update(delta_time);
+        self.game.gui(app().graphics().imgui_frame());
 
         self.graphics().update();
         self.resources().update();

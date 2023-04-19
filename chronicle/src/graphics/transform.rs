@@ -1,4 +1,4 @@
-use cgmath::{Vector3, Vector4, Quaternion, Matrix4};
+use cgmath::{Vector3, Quaternion, Matrix4};
 use cgmath::prelude::SquareMatrix;
 
 use crate::common::quaternion_to_matrix;
@@ -55,6 +55,10 @@ impl Transform {
 
     pub fn translate(&mut self, translation: &Vector3<f32>) {
         self.set_translation(&(self.translation + translation));
+    }
+
+    pub fn rotate(&mut self, rotation: &Quaternion<f32>) {
+        self.set_rotation(&(self.rotation * rotation));
     }
 
     pub fn scale(&mut self, scale: &Vector3<f32>) {

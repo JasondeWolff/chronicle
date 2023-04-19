@@ -3,7 +3,9 @@ import sys
 
 shaders = [
     "shader.vert",
-    "shader.frag"
+    "shader.frag",
+    "imgui.vert",
+    "imgui.frag"
 ]
 
 cwd = ""

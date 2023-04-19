@@ -14,7 +14,9 @@ fn main() {
 struct Example {
     helmet_model: Option<Resource<Model>>,
     helmet_render_models: Vec<RcCell<graphics::DynamicRenderModelProperties>>,
-    render_camera: Option<RcCell<graphics::RenderCameraProperties>>
+    render_camera: Option<RcCell<graphics::RenderCameraProperties>>,
+
+    color: [f32; 4]
 }
 
 impl Game for Example {
@@ -22,12 +24,13 @@ impl Game for Example {
         Box::new(Example {
             helmet_model: None,
             helmet_render_models: Vec::new(),
-            render_camera: None
+            render_camera: None,
+            color: [0.0; 4]
         })
     }
     
     fn start(&mut self) {
-        app().input().set_cursor_mode(input::CursorMode::LOCKED);
+        //app().input().set_cursor_mode(input::CursorMode::LOCKED);
 
         self.helmet_model = Some(app().resources()
             .get_model(String::from("assets/models/DamagedHelmet/glTF/DamagedHelmet.gltf"))
@@ -53,10 +56,16 @@ impl Game for Example {
     }
 
     fn update(&mut self, delta_time: f32) {
-        // for (i, helmet_render_model) in self.helmet_render_models.iter().enumerate() {
-        //     helmet_render_model.as_mut()
-        //         .transform.translate(&Vector3::new(0.0, 1.0 * delta_time * i as f32, 0.0));
-        // }
+        for (i, helmet_render_model) in self.helmet_render_models.iter().enumerate() {
+            helmet_render_model.as_mut()
+                .transform.rotate(&Quaternion::from(
+                    Euler::new(
+                        Deg(0.0),
+                        Deg(2.0 * delta_time * i as f32),
+                        Deg(0.0)
+                    )
+                ));
+        }
 
         const SPEED: f32 = 10.0;
         let mut translation = Vector3::new(0.0, 0.0, 0.0);
@@ -80,6 +89,14 @@ impl Game for Example {
         }
         self.render_camera.as_ref().unwrap().as_mut()
             .camera.translate(&translation);
+    }
+
+    fn gui(&mut self, gui: &mut graphics::ImGuiUI) {
+        gui.window("PBR Shader")
+        .size([400.0, 700.0], imgui::Condition::FirstUseEver)
+        .build(|| {
+            gui.color_picker4("Base Color", &mut self.color);
+        });
     }
 
     fn stop(&mut self) {
