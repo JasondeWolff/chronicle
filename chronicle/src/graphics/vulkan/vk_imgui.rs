@@ -9,7 +9,8 @@ use crate::resources::Texture;
 
 pub struct VkImGui {
     context: imgui::Context,
-    renderer: Renderer
+    renderer: Renderer,
+    rendered: bool
 }
 
 impl VkImGui {
@@ -32,7 +33,8 @@ impl VkImGui {
 
         VkImGui {
             context: context,
-            renderer: renderer
+            renderer: renderer,
+            rendered: true
         }
     }
 
@@ -50,11 +52,21 @@ impl VkImGui {
     }
 
     pub fn new_frame(&mut self) -> &mut imgui::Ui {
-        self.context.new_frame()
+        if !self.rendered {
+            unsafe { imgui::sys::igEndFrame(); }
+        }
+
+        let result = self.context.new_frame();
+        self.rendered = false;
+
+        result
     }
 
     pub fn render(&mut self, app: &mut VkApp, render_pass: Rc<VkRenderPass>) -> (Rc<VkFence>, Rc<VkSemaphore>) {
-        self.renderer.render(app, render_pass, &mut self.context)
+        let result = self.renderer.render(app, render_pass, &mut self.context);
+        self.rendered = true;
+
+        result
     }
 }
 

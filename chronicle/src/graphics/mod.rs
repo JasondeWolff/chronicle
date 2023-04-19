@@ -20,6 +20,11 @@ use crate::Window;
 use crate::resources::{Model, Resource, Mesh, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
+// TODO
+// [ ] ImGui resizing
+// [ ] Debug jittering artifacts
+// [ ] gpu-memory allocator
+
 // #[repr(C)]
 // struct UBO {
 //     model: Matrix4<f32>,
