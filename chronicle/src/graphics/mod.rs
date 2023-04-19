@@ -21,7 +21,7 @@ use crate::resources::{Model, Resource, Mesh, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
 // TODO
-// [ ] ImGui resizing
+// [X] ImGui resizing
 // [ ] Debug jittering artifacts
 // [ ] gpu-memory allocator
 

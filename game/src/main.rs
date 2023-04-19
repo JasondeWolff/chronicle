@@ -1,5 +1,8 @@
+use std::collections::VecDeque;
+
 extern crate chronicle;
-use chronicle::*;
+
+use chronicle::{*, timer::Timer};
 use resources::{Resource, Model};
 use input::{VirtualKeyCode, MouseButton};
 
@@ -16,7 +19,9 @@ struct Example {
     helmet_render_models: Vec<RcCell<graphics::DynamicRenderModelProperties>>,
     render_camera: Option<RcCell<graphics::RenderCameraProperties>>,
 
-    color: [f32; 4]
+    fps_histogram: VecDeque<f32>,
+    ms_histogram: VecDeque<f32>,
+    fps_histogram_timer: Timer
 }
 
 impl Game for Example {
@@ -25,7 +30,9 @@ impl Game for Example {
             helmet_model: None,
             helmet_render_models: Vec::new(),
             render_camera: None,
-            color: [0.0; 4]
+            fps_histogram: VecDeque::new(),
+            ms_histogram: VecDeque::new(),
+            fps_histogram_timer: Timer::new()
         })
     }
     
@@ -91,11 +98,38 @@ impl Game for Example {
             .camera.translate(&translation);
     }
 
-    fn gui(&mut self, gui: &mut graphics::ImGuiUI) {
-        gui.window("PBR Shader")
+    fn gui(&mut self, delta_time: f32, gui: &mut graphics::ImGuiUI) {
+        if self.fps_histogram_timer.elapsed() > 0.01 {
+            self.fps_histogram_timer.reset();
+            if self.fps_histogram.len() > 100 {
+                self.fps_histogram.pop_front();
+                self.ms_histogram.pop_front();
+            }
+            self.ms_histogram.push_back(delta_time * 1000.0);
+            self.fps_histogram.push_back(1.0 / delta_time);
+        }
+
+        let mut avg_fps: f32 = self.fps_histogram.iter().sum();
+        let mut avg_ms: f32 = self.ms_histogram.iter().sum();
+        avg_fps /= self.fps_histogram.len() as f32;
+        avg_ms /= self.ms_histogram.len() as f32;
+
+        self.fps_histogram.make_contiguous();
+        self.ms_histogram.make_contiguous();
+
+        gui.window("Render Stats")
         .size([400.0, 700.0], imgui::Condition::FirstUseEver)
         .build(|| {
-            gui.color_picker4("Base Color", &mut self.color);
+            gui.plot_lines(format!("Fps {:.1}", avg_fps), self.fps_histogram.as_slices().0)
+                .graph_size([0.0, 40.0])
+                .scale_min(1.0)
+                .scale_max(180.0)
+                .build();
+            gui.plot_lines(format!("Ms {:.1}", avg_ms), self.ms_histogram.as_slices().0)
+                .graph_size([0.0, 40.0])
+                .scale_min(1.0)
+                .scale_max(50.0)
+                .build();
         });
     }
 
