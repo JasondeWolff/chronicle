@@ -212,6 +212,8 @@ impl Renderer {
         );
 
         let draw_data = ctx.render();
+        let clip_offset = draw_data.display_pos;
+        let clip_scale = draw_data.framebuffer_scale;
 
         let mut vertex_buffers = Vec::new();
         let mut index_buffers = Vec::new();
@@ -276,22 +278,26 @@ impl Renderer {
                                 DrawCmd::Elements {
                                     count,
                                     cmd_params: DrawCmdParams {
-                                      clip_rect: [x, y, z, w],
-                                      texture_id,
+                                      clip_rect,
                                       idx_offset,
                                       ..
                                     },
                                 } => {
-                                    // cmd_buffer.set_scissor(vk::Rect2D {
-                                    //     offset: vk::Offset2D {
-                                    //         x: (x * scale_w) as i32,
-                                    //         y: (fb_height - w * scale_h) as i32
-                                    //     },
-                                    //     extent: vk::Extent2D {
-                                    //         width: ((z - x) * scale_w) as u32,
-                                    //         height: ((w - y) * scale_h) as u32
-                                    //     }
-                                    // });
+                                    let clip_x = (clip_rect[0] - clip_offset[0]) * clip_scale[0];
+                                    let clip_y = (clip_rect[1] - clip_offset[1]) * clip_scale[1];
+                                    let clip_w = (clip_rect[2] - clip_offset[0]) * clip_scale[0] - clip_x;
+                                    let clip_h = (clip_rect[3] - clip_offset[1]) * clip_scale[1] - clip_y;
+
+                                    cmd_buffer.set_scissor(vk::Rect2D {
+                                        offset: vk::Offset2D {
+                                            x: (clip_x as i32).max(0),
+                                            y: (clip_y as i32).max(0),
+                                        },
+                                        extent: vk::Extent2D {
+                                            width: clip_w as u32,
+                                            height: clip_h as u32,
+                                        },
+                                    });
             
                                     cmd_buffer.draw_indexed(
                                         count as u32,
