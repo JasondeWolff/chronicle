@@ -251,7 +251,6 @@ impl Renderer {
             ));
         }
 
-        let swapchain = app.get_swapchain();
         if let Some(swapchain) = app.get_swapchain() {
             let cmd_queue = app.get_cmd_queue();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
@@ -264,7 +263,7 @@ impl Renderer {
                     width: fb_width as u32,
                     height: fb_height as u32
                 });
-                cmd_buffer.begin_render_pass(&render_pass, &swapchain, false);
+                cmd_buffer.begin_render_pass(&render_pass, &swapchain);
 
                 cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
                 cmd_buffer.set_desc_layout(0, self.desc_layout.clone());
@@ -328,7 +327,7 @@ impl Renderer {
                 cmd_buffer.end();
             }
 
-            let mut swapchain = swapchain.as_mut();
+            let swapchain = swapchain.as_mut();
             let render_finished = swapchain.render_finished_semaphore();
 
             let fence = cmd_queue.submit_cmd_buffer(

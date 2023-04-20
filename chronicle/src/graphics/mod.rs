@@ -21,9 +21,8 @@ use crate::resources::{Model, Resource, Mesh, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
 // TODO
-// [X] ImGui resizing
-// [ ] Debug jittering artifacts
 // [ ] gpu-memory allocator
+// [ ] Reset cmd buffers in cmd queue on seperate thread, safe 9% total performance
 
 // #[repr(C)]
 // struct UBO {
@@ -257,7 +256,7 @@ impl Renderer {
 
                     let swapchain = swapchain.as_ref();
                     cmd_buffer.set_viewport(swapchain.get_extent());
-                    cmd_buffer.begin_render_pass(&self.render_pass, &swapchain, true);
+                    cmd_buffer.begin_render_pass(&self.render_pass, &swapchain);
 
                     cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
 

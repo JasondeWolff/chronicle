@@ -141,47 +141,32 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain, clear: bool) {
-        let render_pass_begin_info = if true {
-            let clear_values = [
-                vk::ClearValue {
-                    color: vk::ClearColorValue {
-                        float32: [0.0, 0.0, 0.0, 1.0],
-                    },
+    pub fn begin_render_pass(&self, render_pass: &VkRenderPass, swapchain: &VkSwapchain) {
+        let clear_values = [
+            vk::ClearValue {
+                color: vk::ClearColorValue {
+                    float32: [0.0, 0.0, 0.0, 1.0],
                 },
-                vk::ClearValue {
-                    depth_stencil: vk::ClearDepthStencilValue {
-                        depth: 1.0,
-                        stencil: 0,
-                    },
-                }
-            ];
+            },
+            vk::ClearValue {
+                depth_stencil: vk::ClearDepthStencilValue {
+                    depth: 1.0,
+                    stencil: 0,
+                },
+            }
+        ];
 
-            vk::RenderPassBeginInfo {
-                s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
-                p_next: ptr::null(),
-                render_pass: render_pass.get_render_pass(),
-                framebuffer: *swapchain.get_current_framebuffer(),
-                render_area: vk::Rect2D {
-                    offset: vk::Offset2D { x: 0, y: 0 },
-                    extent: *swapchain.get_extent(),
-                },
-                clear_value_count: clear_values.len() as u32,
-                p_clear_values: clear_values.as_ptr(),
-            }
-        } else {
-            vk::RenderPassBeginInfo {
-                s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
-                p_next: ptr::null(),
-                render_pass: render_pass.get_render_pass(),
-                framebuffer: *swapchain.get_current_framebuffer(),
-                render_area: vk::Rect2D {
-                    offset: vk::Offset2D { x: 0, y: 0 },
-                    extent: *swapchain.get_extent(),
-                },
-                clear_value_count: 0,
-                p_clear_values: std::ptr::null(),
-            }
+        let render_pass_begin_info = vk::RenderPassBeginInfo {
+            s_type: vk::StructureType::RENDER_PASS_BEGIN_INFO,
+            p_next: ptr::null(),
+            render_pass: render_pass.get_render_pass(),
+            framebuffer: *swapchain.get_current_framebuffer(),
+            render_area: vk::Rect2D {
+                offset: vk::Offset2D { x: 0, y: 0 },
+                extent: *swapchain.get_extent(),
+            },
+            clear_value_count: clear_values.len() as u32,
+            p_clear_values: clear_values.as_ptr(),
         };
 
         unsafe {
