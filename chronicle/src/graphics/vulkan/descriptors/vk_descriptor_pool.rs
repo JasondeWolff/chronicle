@@ -31,7 +31,7 @@ impl VkDescriptorPool {
             s_type: vk::StructureType::DESCRIPTOR_POOL_CREATE_INFO,
             p_next: std::ptr::null(),
             flags: vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET,
-            max_sets: 128,//16,
+            max_sets: 512,//16,
             pool_size_count: pool_sizes.len() as u32,
             p_pool_sizes: pool_sizes.as_ptr(),
         };

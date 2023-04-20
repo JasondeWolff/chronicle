@@ -24,4 +24,4 @@ pub const VALIDATION: ValidationInfo = ValidationInfo {
 //     required_validation_layers: ["VK_LAYER_KHRONOS_validation"],
 // };
 
-pub const MAX_FRAMES_IN_FLIGHT: usize = 2;
+pub const MAX_FRAMES_IN_FLIGHT: usize = 3;

@@ -50,7 +50,8 @@ impl VkCmdQueue {
         let queue_clone = queue.clone();
         std::thread::spawn(move || {
             while queue_clone.strong_count() > 1 {
-                queue_clone.as_mut().process_busy_cmds()
+                queue_clone.as_mut().process_busy_cmds();
+                std::thread::yield_now();
             }
         });
 
