@@ -253,6 +253,7 @@ impl Renderer {
 
         if let Some(swapchain) = app.get_swapchain() {
             let cmd_queue = app.get_cmd_queue();
+            let mut cmd_queue = cmd_queue.as_mut();
             let cmd_buffer = cmd_queue.get_cmd_buffer(); {
                 let mut cmd_buffer = cmd_buffer.as_mut();
                 cmd_buffer.reset();

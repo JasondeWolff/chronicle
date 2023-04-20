@@ -51,8 +51,8 @@ pub struct VkApp {
     physical_device: VkPhysicalDevice,
     device: Arc<VkLogicalDevice>,
     allocator: ArcMutex<Allocator>,
-    graphics_queue: VkCmdQueue,
-    present_queue: VkCmdQueue,
+    graphics_queue: ArcMutex<VkCmdQueue>,
+    present_queue: ArcMutex<VkCmdQueue>,
     swapchain: Option<ArcMutex<VkSwapchain>>,
     desc_pool: Arc<VkDescriptorPool>,
 
@@ -108,8 +108,6 @@ impl VkApp {
     }
 
     pub fn update(&mut self) {
-        self.graphics_queue.process_busy_cmds();
-        self.present_queue.process_busy_cmds();
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
@@ -137,8 +135,8 @@ impl VkApp {
         self.allocator.clone()
     }
 
-    pub fn get_cmd_queue(&mut self) -> &mut VkCmdQueue {
-        &mut self.graphics_queue
+    pub fn get_cmd_queue(&mut self) -> ArcMutex<VkCmdQueue> {
+        self.graphics_queue.clone()
     }
 
     pub fn get_swapchain(&self) -> Option<ArcMutex<VkSwapchain>> {

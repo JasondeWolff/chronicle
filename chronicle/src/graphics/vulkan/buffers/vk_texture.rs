@@ -50,6 +50,7 @@ impl VkTexture {
         );
 
         let cmd_queue = app.get_cmd_queue();
+        let mut cmd_queue = cmd_queue.as_mut();
         let cmd_buffer = cmd_queue.get_cmd_buffer(); {
             let cmd_buffer_ref = cmd_buffer.as_ref();
             cmd_buffer_ref.begin(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);

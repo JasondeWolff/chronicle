@@ -34,10 +34,10 @@ impl VkCmdQueue {
         desc_pool: Arc<VkDescriptorPool>,
         queue: vk::Queue,
         queue_type: VkQueueType
-    ) -> Self {
+    ) -> ArcMutex<Self> {
         let cmd_pool = VkCmdPool::new(device.clone());
 
-        let mut queue = VkCmdQueue {
+        let queue = ArcMutex::new(VkCmdQueue {
             device: device,
             desc_pool: desc_pool,
             queue: queue,
@@ -45,13 +45,14 @@ impl VkCmdQueue {
             _queue_type: queue_type,
             busy_cmd_buffers: Mutex::new(VecDeque::new()),
             idle_cmd_buffers: Mutex::new(VecDeque::new())
-        };
+        });
 
-        // std::thread::spawn(|| {
-        //     while true {
-        //         queue.process_busy_cmds()
-        //     }
-        // });
+        let queue_clone = queue.clone();
+        std::thread::spawn(move || {
+            while queue_clone.strong_count() > 1 {
+                queue_clone.as_mut().process_busy_cmds()
+            }
+        });
 
         queue
     }

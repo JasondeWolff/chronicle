@@ -1,6 +1,7 @@
 pub use std::sync::Arc;
 pub use std::sync::{Mutex, MutexGuard};
 
+#[derive(Clone)]
 pub struct ArcMutex<T> {
     value: Arc<Mutex<T>>
 }
