@@ -2,7 +2,7 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkVertexBuffer {
-    vertex_buffer: Rc<VkBuffer>,
+    vertex_buffer: Arc<VkBuffer>,
     vertex_count: u32,
     dynamic: bool
 }
@@ -72,13 +72,13 @@ impl VkVertexBuffer {
         };
 
         VkVertexBuffer {
-            vertex_buffer: Rc::new(vertex_buffer),
+            vertex_buffer: Arc::new(vertex_buffer),
             vertex_count: vertices.len() as u32,
             dynamic: dynamic
         }
     }
 
-    pub fn track_buffer(&self) -> Rc<VkBuffer> {
+    pub fn track_buffer(&self) -> Arc<VkBuffer> {
         self.vertex_buffer.clone()
     }
 

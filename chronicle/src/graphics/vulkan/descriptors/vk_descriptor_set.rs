@@ -5,17 +5,17 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkDescriptorSet {
-    device: Rc<VkLogicalDevice>,
-    desc_pool: Rc<VkDescriptorPool>,
+    device: Arc<VkLogicalDevice>,
+    desc_pool: Arc<VkDescriptorPool>,
     descriptor_set: vk::DescriptorSet
 }
 
 impl VkDescriptorSet {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        desc_pool: Rc<VkDescriptorPool>,
-        desc_layout: Rc<VkDescriptorSetLayout>
-    ) -> Rc<Self> {
+        device: Arc<VkLogicalDevice>,
+        desc_pool: Arc<VkDescriptorPool>,
+        desc_layout: Arc<VkDescriptorSetLayout>
+    ) -> Arc<Self> {
         let desc_layouts = [desc_layout.get_desc_layout()];
 
         let descriptor_set_allocate_info = vk::DescriptorSetAllocateInfo {
@@ -32,7 +32,7 @@ impl VkDescriptorSet {
                 .expect("Failed to allocate descriptor sets.")
         };
 
-        Rc::new(VkDescriptorSet {
+        Arc::new(VkDescriptorSet {
             device: device,
             desc_pool: desc_pool,
             descriptor_set: descriptor_sets[0]

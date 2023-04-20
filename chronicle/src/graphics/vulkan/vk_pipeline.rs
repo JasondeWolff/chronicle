@@ -1,17 +1,16 @@
-use std::rc::Rc;
 use std::ptr;
 
 use crate::graphics::*;
 
 pub struct VkPipeline {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     pipeline_layout: vk::PipelineLayout,
     pipeline: vk::Pipeline
 }
 
 impl VkPipeline {
     pub fn new<T: VkVertexDescs>(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         extent: &vk::Extent2D,
         render_pass: &VkRenderPass,
         desc_layouts: &Vec<&VkDescriptorSetLayout>,
@@ -19,7 +18,7 @@ impl VkPipeline {
         shaders: &Vec<String>,
         cull_mode: vk::CullModeFlags,
         depth_test_enable: vk::Bool32
-    ) -> Rc<Self> {
+    ) -> Arc<Self> {
         let main_function_name = std::ffi::CString::new("main").unwrap();
 
         let mut shader_modules = Vec::new();
@@ -229,7 +228,7 @@ impl VkPipeline {
                 .expect("Failed to create Graphics Pipeline.")
         };
 
-        Rc::new(VkPipeline {
+        Arc::new(VkPipeline {
             device: device,
             pipeline_layout: pipeline_layout,
             pipeline: pipeline[0]

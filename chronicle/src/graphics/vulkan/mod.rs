@@ -49,14 +49,14 @@ pub trait ToAny: 'static {
 pub struct VkApp {
     instance: VkInstance,
     physical_device: VkPhysicalDevice,
-    device: Rc<VkLogicalDevice>,
-    allocator: RcCell<Allocator>,
+    device: Arc<VkLogicalDevice>,
+    allocator: ArcMutex<Allocator>,
     graphics_queue: VkCmdQueue,
     present_queue: VkCmdQueue,
-    swapchain: Option<RcCell<VkSwapchain>>,
-    desc_pool: Rc<VkDescriptorPool>,
+    swapchain: Option<ArcMutex<VkSwapchain>>,
+    desc_pool: Arc<VkDescriptorPool>,
 
-    uniform_buffers: HashMap<String, Vec<RcCell<VkUniformBuffer>>>
+    uniform_buffers: HashMap<String, Vec<ArcMutex<VkUniformBuffer>>>
 }
 
 impl VkApp {
@@ -65,7 +65,7 @@ impl VkApp {
         let physical_device = VkPhysicalDevice::new(&instance);
         let device = VkLogicalDevice::new(&instance, &physical_device);
 
-        let allocator = RcCell::new(Allocator::new(&AllocatorCreateDesc {
+        let allocator = ArcMutex::new(Allocator::new(&AllocatorCreateDesc {
             instance: instance.get_instance().clone(),
             device: device.get_device().clone(),
             physical_device: physical_device.get_device(),
@@ -125,7 +125,7 @@ impl VkApp {
         }
     }
 
-    pub fn get_device(&self) -> Rc<VkLogicalDevice> {
+    pub fn get_device(&self) -> Arc<VkLogicalDevice> {
         self.device.clone()
     }
 
@@ -133,7 +133,7 @@ impl VkApp {
         &self.physical_device
     }
 
-    pub fn get_allocator(&self) -> RcCell<Allocator> {
+    pub fn get_allocator(&self) -> ArcMutex<Allocator> {
         self.allocator.clone()
     }
 
@@ -141,18 +141,18 @@ impl VkApp {
         &mut self.graphics_queue
     }
 
-    pub fn get_swapchain(&self) -> Option<RcCell<VkSwapchain>> {
+    pub fn get_swapchain(&self) -> Option<ArcMutex<VkSwapchain>> {
         match &self.swapchain {
             Some(swapchain) => Some(swapchain.clone()),
             None => None
         }
     }
 
-    pub fn get_desc_pool(&self) -> Rc<VkDescriptorPool> {
+    pub fn get_desc_pool(&self) -> Arc<VkDescriptorPool> {
         self.desc_pool.clone()
     }
 
-    pub fn uniform_buffer<T: ToAny>(&mut self, name: &str) -> RcCell<VkUniformBuffer> {
+    pub fn uniform_buffer<T: ToAny>(&mut self, name: &str) -> ArcMutex<VkUniformBuffer> {
         let name = String::from(name);
 
         let swapchain = self.swapchain.as_ref().unwrap().as_ref();
@@ -164,7 +164,7 @@ impl VkApp {
             None => {
                 let mut uniform_buffers = Vec::new();
                 for _ in 0..img_count {
-                    uniform_buffers.push(RcCell::new(VkUniformBuffer::new::<T>(
+                    uniform_buffers.push(ArcMutex::new(VkUniformBuffer::new::<T>(
                         self.device.clone(),
                         &self.physical_device,
                         self.allocator.clone(),

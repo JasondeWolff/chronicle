@@ -5,20 +5,20 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkUniformBuffer {
-    uniform_buffer: Rc<VkBuffer>,
+    uniform_buffer: Arc<VkBuffer>,
     data: *mut dyn ToAny,
     size: usize
 }
 
 impl VkUniformBuffer {
     pub fn new<T: ToAny>(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         physical_device: &VkPhysicalDevice,
-        allocator: RcCell<Allocator>
+        allocator: ArcMutex<Allocator>
     ) -> Self {
         let size = std::mem::size_of::<T>();
 
-        let uniform_buffer = Rc::new(VkBuffer::new(
+        let uniform_buffer = Arc::new(VkBuffer::new(
             device,
             allocator,
             size as u64,
@@ -36,7 +36,7 @@ impl VkUniformBuffer {
         }
     }
 
-    pub fn track_buffer(&self) -> Rc<VkBuffer> {
+    pub fn track_buffer(&self) -> Arc<VkBuffer> {
         self.uniform_buffer.clone()
     }
 

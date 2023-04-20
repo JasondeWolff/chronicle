@@ -5,12 +5,12 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkSampler {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     sampler: vk::Sampler
 }
 
 impl VkSampler {
-    pub fn new(device: Rc<VkLogicalDevice>, texture: &VkTexture) -> Self {
+    pub fn new(device: Arc<VkLogicalDevice>, texture: &VkTexture) -> Self {
         let sampler_create_info = vk::SamplerCreateInfo {
             s_type: vk::StructureType::SAMPLER_CREATE_INFO,
             p_next: std::ptr::null(),

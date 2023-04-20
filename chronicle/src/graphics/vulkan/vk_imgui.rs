@@ -15,7 +15,7 @@ pub struct VkImGui {
 
 impl VkImGui {
     pub fn new(
-        app: RcCell<VkApp>,
+        app: ArcMutex<VkApp>,
         render_pass: &VkRenderPass
     ) -> Self {
         let mut context = imgui::Context::create();
@@ -62,7 +62,7 @@ impl VkImGui {
         result
     }
 
-    pub fn render(&mut self, app: &mut VkApp, render_pass: Rc<VkRenderPass>) -> (Rc<VkFence>, Rc<VkSemaphore>) {
+    pub fn render(&mut self, app: &mut VkApp, render_pass: Arc<VkRenderPass>) -> (Arc<VkFence>, Arc<VkSemaphore>) {
         let result = self.renderer.render(app, render_pass, &mut self.context);
         self.rendered = true;
 
@@ -114,16 +114,16 @@ impl VkVertexDescs for ImGuiVert {
 }
 
 struct Renderer {
-    device: Rc<VkLogicalDevice>,
-    pipeline: Rc<VkPipeline>,
-    desc_layout: Rc<VkDescriptorSetLayout>,
+    device: Arc<VkLogicalDevice>,
+    pipeline: Arc<VkPipeline>,
+    desc_layout: Arc<VkDescriptorSetLayout>,
     texture: VkTexture,
     sampler: VkSampler
 }
 
 impl Renderer {
     fn new(
-        app: RcCell<VkApp>,
+        app: ArcMutex<VkApp>,
         render_pass: &VkRenderPass,
         imgui: &mut imgui::Context
     ) -> Self {
@@ -153,9 +153,9 @@ impl Renderer {
     }
 
     fn create_pipeline(
-        app: RcCell<VkApp>,
+        app: ArcMutex<VkApp>,
         render_pass: &VkRenderPass
-    ) -> (Rc<VkPipeline>, Rc<VkDescriptorSetLayout>) {
+    ) -> (Arc<VkPipeline>, Arc<VkDescriptorSetLayout>) {
         let app = app.as_mut();
         let device = app.get_device();
         let swapchain_extent = *app.get_swapchain().unwrap().as_ref().get_extent();
@@ -206,7 +206,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, app: &mut VkApp, render_pass: Rc<VkRenderPass>, ctx: &mut imgui::Context) -> (Rc<VkFence>, Rc<VkSemaphore>) {
+    pub fn render(&mut self, app: &mut VkApp, render_pass: Arc<VkRenderPass>, ctx: &mut imgui::Context) -> (Arc<VkFence>, Arc<VkSemaphore>) {
         use imgui::{DrawVert, DrawIdx, DrawCmd, DrawCmdParams};
 
         let [width, height] = ctx.io().display_size;

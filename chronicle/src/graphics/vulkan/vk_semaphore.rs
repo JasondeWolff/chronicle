@@ -6,12 +6,12 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkSemaphore {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     semaphore: vk::Semaphore
 }
 
 impl VkSemaphore {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
+    pub fn new(device: Arc<VkLogicalDevice>) -> Arc<Self> {
         let semaphore_create_info = vk::SemaphoreCreateInfo {
             s_type: vk::StructureType::SEMAPHORE_CREATE_INFO,
             p_next: ptr::null(),
@@ -24,7 +24,7 @@ impl VkSemaphore {
                 .expect("Failed to create Semaphore Object.")
         };
 
-        Rc::new(VkSemaphore {
+        Arc::new(VkSemaphore {
             device: device,
             semaphore: semaphore
         })

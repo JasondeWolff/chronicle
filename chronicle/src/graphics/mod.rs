@@ -1,3 +1,6 @@
+pub use std::sync::Arc;
+pub use crate::ArcMutex;
+
 pub mod mod_structs;
 pub use mod_structs::*;
 
@@ -20,10 +23,6 @@ use crate::Window;
 use crate::resources::{Model, Resource, Mesh, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
-// TODO
-// [ ] gpu-memory allocator
-// [ ] Reset cmd buffers in cmd queue on seperate thread, safe 9% total performance
-
 // #[repr(C)]
 // struct UBO {
 //     model: Matrix4<f32>,
@@ -43,15 +42,15 @@ struct MVP {
 }
 
 pub struct Renderer {
-    app: RcCell<VkApp>,
+    app: ArcMutex<VkApp>,
     imgui: VkImGui,
 
-    render_img: RcCell<VkImage>,
-    render_pass: Rc<VkRenderPass>,
-    present_render_pass: Rc<VkRenderPass>,
-    pipeline: Rc<VkPipeline>,
+    render_img: ArcMutex<VkImage>,
+    render_pass: Arc<VkRenderPass>,
+    present_render_pass: Arc<VkRenderPass>,
+    pipeline: Arc<VkPipeline>,
 
-    descriptor_layout: Rc<VkDescriptorSetLayout>,
+    descriptor_layout: Arc<VkDescriptorSetLayout>,
 
     models: HashMap<Resource<Model>, Vec<VkMesh>>,
     textures: HashMap<Resource<Texture>, VkTexture>,
@@ -77,7 +76,7 @@ impl Renderer {
             let mut swapchain = swapchain.as_mut();
 
             let max_sample_count = physical_device.get_max_sample_count();
-            render_img = RcCell::new(VkImage::new(
+            render_img = ArcMutex::new(VkImage::new(
                 device.clone(),
                 swapchain.get_extent().width, swapchain.get_extent().height,
                 1,
@@ -151,7 +150,7 @@ impl Renderer {
             );
         }
 
-        let app = RcCell::new(app);
+        let app = ArcMutex::new(app);
         let imgui = VkImGui::new(
             app.clone(),
             &render_pass
@@ -326,7 +325,7 @@ impl Renderer {
 
             let sample_count = self.render_img.as_ref().sample_count();
 
-            self.render_img = RcCell::new(VkImage::new(
+            self.render_img = ArcMutex::new(VkImage::new(
                 device.clone(),
                 swapchain.get_extent().width, swapchain.get_extent().height,
                 1,

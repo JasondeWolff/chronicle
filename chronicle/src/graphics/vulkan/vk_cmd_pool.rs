@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::ptr;
 
 use ash::vk;
@@ -6,12 +5,12 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkCmdPool {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     cmd_pool: vk::CommandPool
 }
 
 impl VkCmdPool {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
+    pub fn new(device: Arc<VkLogicalDevice>) -> Arc<Self> {
         let command_pool_create_info = vk::CommandPoolCreateInfo {
             s_type: vk::StructureType::COMMAND_POOL_CREATE_INFO,
             p_next: ptr::null(),
@@ -25,7 +24,7 @@ impl VkCmdPool {
                 .expect("Failed to create Command Pool.")
         };
 
-        Rc::new(VkCmdPool {
+        Arc::new(VkCmdPool {
             device: device,
             cmd_pool: cmd_pool
         })

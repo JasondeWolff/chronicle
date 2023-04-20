@@ -1,16 +1,14 @@
-use std::rc::Rc;
-
 use crate::graphics::*;
 use crate::app;
 
 pub struct VkShaderModule {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     shader_module: vk::ShaderModule,
     shader_stage_flags: vk::ShaderStageFlags
 }
 
 impl VkShaderModule {
-    pub fn new(device: Rc<VkLogicalDevice>, name: String) -> Self {
+    pub fn new(device: Arc<VkLogicalDevice>, name: String) -> Self {
         let shader_code = app().resources()
             .get_binary_blob(format!("assets/builtin/shaders/bin/{name}.spv"));
 

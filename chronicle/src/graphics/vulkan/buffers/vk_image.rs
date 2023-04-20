@@ -1,11 +1,9 @@
-use std::rc::Rc;
-
 use ash::vk;
 
 use crate::graphics::*;
 
 pub struct VkImage {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     image: vk::Image,
     image_view: Option<vk::ImageView>,
     memory: vk::DeviceMemory,
@@ -16,7 +14,7 @@ pub struct VkImage {
 
 impl VkImage {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         width: u32, height: u32,
         mip_levels: u32,
         format: vk::Format,
@@ -94,7 +92,7 @@ impl VkImage {
     }
 
     pub fn create_image_view(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         image: vk::Image,
         format: vk::Format
     ) -> vk::ImageView {

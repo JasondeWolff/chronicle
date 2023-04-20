@@ -6,15 +6,15 @@ use crate::graphics::*;
 
 #[derive(Clone)]
 pub struct VkDescriptorSetLayout {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     desc_layout: vk::DescriptorSetLayout
 }
 
 impl VkDescriptorSetLayout {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         desc_layout_bindings: &Vec<vk::DescriptorSetLayoutBinding>
-    ) -> Rc<Self> {
+    ) -> Arc<Self> {
         let ubo_layout_create_info = vk::DescriptorSetLayoutCreateInfo {
             s_type: vk::StructureType::DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             p_next: std::ptr::null(),
@@ -29,7 +29,7 @@ impl VkDescriptorSetLayout {
                 .expect("Failed to create Descriptor Set Layout.")
         };
 
-        Rc::new(VkDescriptorSetLayout {
+        Arc::new(VkDescriptorSetLayout {
             device: device,
             desc_layout: desc_layout
         })

@@ -3,7 +3,7 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkIndexBuffer {
-    index_buffer: Rc<VkBuffer>,
+    index_buffer: Arc<VkBuffer>,
     index_count: u32,
     dynamic: bool
 }
@@ -73,13 +73,13 @@ impl VkIndexBuffer {
         };
 
         VkIndexBuffer {
-            index_buffer: Rc::new(index_buffer),
+            index_buffer: Arc::new(index_buffer),
             index_count: indices.len() as u32,
             dynamic: dynamic
         }
     }
 
-    pub fn track_buffer(&self) -> Rc<VkBuffer> {
+    pub fn track_buffer(&self) -> Arc<VkBuffer> {
         self.index_buffer.clone()
     }
 

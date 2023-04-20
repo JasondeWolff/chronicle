@@ -5,8 +5,8 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkBuffer {
-    device: Rc<VkLogicalDevice>,
-    allocator: RcCell<Allocator>,
+    device: Arc<VkLogicalDevice>,
+    allocator: ArcMutex<Allocator>,
     buffer: vk::Buffer,
     allocation: Option<Allocation>,
     size: vk::DeviceSize
@@ -14,8 +14,8 @@ pub struct VkBuffer {
 
 impl VkBuffer {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        allocator: RcCell<Allocator>,
+        device: Arc<VkLogicalDevice>,
+        allocator: ArcMutex<Allocator>,
         size: vk::DeviceSize,
         usage: vk::BufferUsageFlags,
         required_memory_properties: vk::MemoryPropertyFlags,

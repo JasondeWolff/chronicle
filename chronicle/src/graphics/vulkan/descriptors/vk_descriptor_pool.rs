@@ -10,12 +10,12 @@ use crate::graphics::*;
 // descriptor set layout should be hashable to reuse old descriptors
 
 pub struct VkDescriptorPool {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     desc_pool: vk::DescriptorPool
 }
 
 impl VkDescriptorPool {
-    pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
+    pub fn new(device: Arc<VkLogicalDevice>) -> Arc<Self> {
         let pool_sizes = [
             vk::DescriptorPoolSize {
                 ty: vk::DescriptorType::UNIFORM_BUFFER,
@@ -42,7 +42,7 @@ impl VkDescriptorPool {
                 .expect("Failed to create Descriptor Pool.")
         };
 
-        Rc::new(VkDescriptorPool {
+        Arc::new(VkDescriptorPool {
             device: device,
             desc_pool: desc_pool
         })

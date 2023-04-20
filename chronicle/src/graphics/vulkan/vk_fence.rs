@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::ptr;
 
 use ash::vk;
@@ -6,12 +5,12 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkFence {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     fence: vk::Fence
 }
 
 impl VkFence {
-    pub fn new(device: Rc<VkLogicalDevice>, signaled: bool) -> Rc<Self> {
+    pub fn new(device: Arc<VkLogicalDevice>, signaled: bool) -> Arc<Self> {
         let create_flags = if signaled {
             vk::FenceCreateFlags::SIGNALED
         } else {
@@ -29,7 +28,7 @@ impl VkFence {
             .expect("Failed to create Semaphore Object.")
         };
 
-        Rc::new(VkFence {
+        Arc::new(VkFence {
             device: device,
             fence: fence
         })

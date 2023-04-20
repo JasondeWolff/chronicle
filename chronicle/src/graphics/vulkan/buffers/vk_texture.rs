@@ -10,7 +10,7 @@ pub struct VkTexture {
 
 impl VkTexture {
     pub fn new(
-        app: RcCell<VkApp>,
+        app: ArcMutex<VkApp>,
         texture_resource: Resource<Texture>
     ) -> Self {
         let mut app = app.as_mut();

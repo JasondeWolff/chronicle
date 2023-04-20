@@ -1,24 +1,26 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use std::collections::VecDeque;
+use std::sync::Mutex;
+use std::thread::Thread;
 
 use ash::vk;
 
 use crate::graphics::*;
 
 struct InFlightCmdBuffer {
-    fence: Rc<VkFence>,
-    cmd_buffer: RcCell<VkCmdBuffer>
+    fence: Arc<VkFence>,
+    cmd_buffer: ArcMutex<VkCmdBuffer>
 }
 
 pub struct VkCmdQueue {
-    device: Rc<VkLogicalDevice>,
-    desc_pool: Rc<VkDescriptorPool>,
+    device: Arc<VkLogicalDevice>,
+    desc_pool: Arc<VkDescriptorPool>,
     queue: vk::Queue,
-    cmd_pool: Rc<VkCmdPool>,
+    cmd_pool: Arc<VkCmdPool>,
     _queue_type: VkQueueType,
 
-    busy_cmd_buffers: VecDeque<InFlightCmdBuffer>,
-    idle_cmd_buffers: VecDeque<RcCell<VkCmdBuffer>>
+    busy_cmd_buffers: Mutex<VecDeque<InFlightCmdBuffer>>,
+    idle_cmd_buffers: Mutex<VecDeque<ArcMutex<VkCmdBuffer>>>
 }
 
 pub enum VkQueueType {
@@ -28,33 +30,41 @@ pub enum VkQueueType {
 
 impl VkCmdQueue {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        desc_pool: Rc<VkDescriptorPool>,
+        device: Arc<VkLogicalDevice>,
+        desc_pool: Arc<VkDescriptorPool>,
         queue: vk::Queue,
         queue_type: VkQueueType
     ) -> Self {
         let cmd_pool = VkCmdPool::new(device.clone());
 
-        VkCmdQueue {
+        let mut queue = VkCmdQueue {
             device: device,
             desc_pool: desc_pool,
             queue: queue,
             cmd_pool: cmd_pool,
             _queue_type: queue_type,
-            busy_cmd_buffers: VecDeque::new(),
-            idle_cmd_buffers: VecDeque::new()
-        }
+            busy_cmd_buffers: Mutex::new(VecDeque::new()),
+            idle_cmd_buffers: Mutex::new(VecDeque::new())
+        };
+
+        // std::thread::spawn(|| {
+        //     while true {
+        //         queue.process_busy_cmds()
+        //     }
+        // });
+
+        queue
     }
 
     pub fn get_cmd_queue(&self) -> vk::Queue {
         self.queue
     }
 
-    pub fn get_cmd_buffer(&mut self) -> RcCell<VkCmdBuffer> {
-        match self.idle_cmd_buffers.pop_front() {
+    pub fn get_cmd_buffer(&mut self) -> ArcMutex<VkCmdBuffer> {
+        match self.idle_cmd_buffers.lock().unwrap().pop_front() {
             Some(idle_cmd_buffer) => idle_cmd_buffer,
             None => {
-                RcCell::new(VkCmdBuffer::new(
+                ArcMutex::new(VkCmdBuffer::new(
                     self.device.clone(),
                     self.cmd_pool.clone(),
                     self.desc_pool.clone()
@@ -64,10 +74,10 @@ impl VkCmdQueue {
     }
 
     pub fn submit_cmd_buffer(&mut self,
-        cmd_buffer: RcCell<VkCmdBuffer>,
+        cmd_buffer: ArcMutex<VkCmdBuffer>,
         wait_semaphores: Option<&Vec<&VkSemaphore>>,
         signal_semaphores: Option<&Vec<&VkSemaphore>>
-    ) -> Rc<VkFence> {
+    ) -> Arc<VkFence> {
         self.submit_cmd_buffers(
             &vec![cmd_buffer],
             wait_semaphores,
@@ -76,10 +86,10 @@ impl VkCmdQueue {
     }
 
     pub fn submit_cmd_buffers(&mut self,
-        cmd_buffers: &Vec<RcCell<VkCmdBuffer>>,
+        cmd_buffers: &Vec<ArcMutex<VkCmdBuffer>>,
         wait_semaphores: Option<&Vec<&VkSemaphore>>,
         signal_semaphores: Option<&Vec<&VkSemaphore>>
-    ) -> Rc<VkFence> {
+    ) -> Arc<VkFence> {
         let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
         let mut wait_semaphores_raw = Vec::new();
@@ -137,7 +147,7 @@ impl VkCmdQueue {
         }
 
         for cmd_buffer in cmd_buffers {
-            self.busy_cmd_buffers.push_back(InFlightCmdBuffer {
+            self.busy_cmd_buffers.lock().unwrap().push_back(InFlightCmdBuffer {
                 fence: fence.clone(),
                 cmd_buffer: cmd_buffer.clone()
             });
@@ -147,12 +157,13 @@ impl VkCmdQueue {
     }
 
     pub fn process_busy_cmds(&mut self) {
-        while !self.busy_cmd_buffers.is_empty() {
-            if let Some(inflight_cmd_buffer) = self.busy_cmd_buffers.front() {
+        let mut busy_cmd_buffers = self.busy_cmd_buffers.lock().unwrap();
+        while !busy_cmd_buffers.is_empty() {
+            if let Some(inflight_cmd_buffer) = busy_cmd_buffers.front() {
                 if inflight_cmd_buffer.fence.is_completed() {
-                    let inflight_cmd_buffer = self.busy_cmd_buffers.pop_front().unwrap();
+                    let inflight_cmd_buffer = busy_cmd_buffers.pop_front().unwrap();
                     inflight_cmd_buffer.cmd_buffer.as_mut().reset();
-                    self.idle_cmd_buffers.push_back(inflight_cmd_buffer.cmd_buffer);
+                    self.idle_cmd_buffers.lock().unwrap().push_back(inflight_cmd_buffer.cmd_buffer);
                 }
             } else {
                 break;

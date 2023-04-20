@@ -2,6 +2,8 @@ pub mod timer;
 pub use timer::*;
 pub mod rc_cell;
 pub use rc_cell::*;
+pub mod arc_mutex;
+pub use arc_mutex::*;
 
 use cgmath::{Vector3, Quaternion, Matrix4, SquareMatrix, Vector4};
 

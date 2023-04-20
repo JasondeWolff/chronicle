@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::ptr;
 
 use ash::vk;
@@ -6,21 +5,21 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkRenderPass {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
     render_pass: vk::RenderPass,
     msaa_samples: vk::SampleCountFlags
 }
 
 impl VkRenderPass {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         color_format: vk::Format,
         depth_format: vk::Format,
         msaa_samples: vk::SampleCountFlags,
         load_op: vk::AttachmentLoadOp,
         initial_layout: vk::ImageLayout,
         final_layout: vk::ImageLayout
-    ) -> Rc<Self> {
+    ) -> Arc<Self> {
         let color_attachment = vk::AttachmentDescription {
             flags: vk::AttachmentDescriptionFlags::empty(),
             format: color_format,
@@ -120,7 +119,7 @@ impl VkRenderPass {
                 .expect("Failed to create Render Pass.")
         };
 
-        Rc::new(VkRenderPass {
+        Arc::new(VkRenderPass {
             device: device,
             render_pass: render_pass,
             msaa_samples: msaa_samples

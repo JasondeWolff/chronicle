@@ -247,7 +247,7 @@ impl VkLogicalDevice {
     pub fn new(
         instance: &VkInstance,
         physical_device: &VkPhysicalDevice,
-    ) -> Rc<Self> {
+    ) -> Arc<Self> {
         let indices = VkPhysicalDevice::find_queue_family(instance.get_instance(), physical_device.device, instance.get_surface_loader(), *instance.get_surface());
 
         let mut unique_queue_families = std::collections::HashSet::new();
@@ -317,7 +317,7 @@ impl VkLogicalDevice {
                 .expect("Failed to create logical Device!")
         };
 
-        Rc::new(VkLogicalDevice {
+        Arc::new(VkLogicalDevice {
             device: device,
             queue_indices: indices
         })
@@ -355,3 +355,5 @@ impl Drop for VkLogicalDevice {
         }
     }
 }
+
+unsafe impl Send for VkLogicalDevice {}

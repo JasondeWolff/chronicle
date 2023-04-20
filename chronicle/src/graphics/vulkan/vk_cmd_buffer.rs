@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::ptr;
 use std::collections::HashMap;
 use std::cmp::max;
@@ -8,25 +7,25 @@ use ash::vk;
 use crate::graphics::*;
 
 pub struct VkCmdBuffer {
-    device: Rc<VkLogicalDevice>,
-    cmd_pool: Rc<VkCmdPool>,
+    device: Arc<VkLogicalDevice>,
+    cmd_pool: Arc<VkCmdPool>,
     cmd_buffer: vk::CommandBuffer,
 
-    desc_pool: Rc<VkDescriptorPool>,
-    desc_sets: HashMap<u32, Rc<VkDescriptorSet>>,
-    desc_layouts: HashMap<u32, Rc<VkDescriptorSetLayout>>,
+    desc_pool: Arc<VkDescriptorPool>,
+    desc_sets: HashMap<u32, Arc<VkDescriptorSet>>,
+    desc_layouts: HashMap<u32, Arc<VkDescriptorSetLayout>>,
 
-    pipeline: Option<Rc<VkPipeline>>,
+    pipeline: Option<Arc<VkPipeline>>,
 
-    tracked_buffers: Vec<Rc<VkBuffer>>,
-    tracked_desc_sets: Vec<Rc<VkDescriptorSet>>,
+    tracked_buffers: Vec<Arc<VkBuffer>>,
+    tracked_desc_sets: Vec<Arc<VkDescriptorSet>>,
 }
 
 impl VkCmdBuffer {
     pub fn new(
-        device: Rc<VkLogicalDevice>,
-        cmd_pool: Rc<VkCmdPool>,
-        desc_pool: Rc<VkDescriptorPool>
+        device: Arc<VkLogicalDevice>,
+        cmd_pool: Arc<VkCmdPool>,
+        desc_pool: Arc<VkDescriptorPool>
     ) -> Self {
         let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
@@ -185,7 +184,7 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn bind_graphics_pipeline(&mut self, pipeline: Rc<VkPipeline>) {
+    pub fn bind_graphics_pipeline(&mut self, pipeline: Arc<VkPipeline>) {
         self.pipeline = Some(pipeline.clone());
 
         unsafe {
@@ -505,12 +504,12 @@ impl VkCmdBuffer {
 
     pub fn set_desc_layout(&mut self,
         set: u32,
-        layout: Rc<VkDescriptorSetLayout>
+        layout: Arc<VkDescriptorSetLayout>
     ) {
         self.desc_layouts.insert(set, layout);
     }
 
-    fn get_desc_set(&mut self, set: u32) -> Rc<VkDescriptorSet> {
+    fn get_desc_set(&mut self, set: u32) -> Arc<VkDescriptorSet> {
         let desc_layout = self.desc_layouts.get(&set)
                                                                     .expect("Failed to set desc buffer. (Missing desc layout_");
 

@@ -1,13 +1,12 @@
 use ash::vk;
 
-use std::rc::Rc;
 use std::ptr;
 
 use crate::graphics::*;
 use utility::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct VkSwapchain {
-    device: Rc<VkLogicalDevice>,
+    device: Arc<VkLogicalDevice>,
 
     swapchain_loader: ash::extensions::khr::Swapchain,
     swapchain: vk::SwapchainKHR,
@@ -20,9 +19,9 @@ pub struct VkSwapchain {
     depth_img: Option<VkImage>,
     framebuffers: Vec<vk::Framebuffer>,
 
-    image_available_semaphores: Vec<Rc<VkSemaphore>>,
-    render_finished_semaphores: Vec<Rc<VkSemaphore>>,
-    inflight_fences: [Rc<VkFence>; MAX_FRAMES_IN_FLIGHT],
+    image_available_semaphores: Vec<Arc<VkSemaphore>>,
+    render_finished_semaphores: Vec<Arc<VkSemaphore>>,
+    inflight_fences: [Arc<VkFence>; MAX_FRAMES_IN_FLIGHT],
     current_frame: usize,
     current_img: u32
 }
@@ -36,10 +35,10 @@ pub struct SwapChainSupportDetail {
 impl VkSwapchain {
     pub fn new(
         instance: &VkInstance,
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         physical_device: &VkPhysicalDevice,
         width: u32, height: u32
-    ) -> RcCell<Self> {
+    ) -> ArcMutex<Self> {
         let swapchain_support = Self::query_swapchain_support(physical_device.get_device(), instance.get_surface_loader(), *instance.get_surface());
 
         let surface_format = Self::choose_swapchain_format(&swapchain_support.formats);
@@ -118,7 +117,7 @@ impl VkSwapchain {
 
         let depth_format = Self::optimal_depth_format(instance, physical_device);
 
-        RcCell::new(VkSwapchain {
+        ArcMutex::new(VkSwapchain {
             device: device,
 
             swapchain_loader: swapchain_loader,
@@ -143,8 +142,8 @@ impl VkSwapchain {
 
     pub fn build_framebuffers(&mut self,
         physical_device: &VkPhysicalDevice,
-        render_pass: Rc<VkRenderPass>,
-        render_img: RcCell<VkImage>
+        render_pass: Arc<VkRenderPass>,
+        render_img: ArcMutex<VkImage>
     ) {
         assert_eq!(self.framebuffers.len(), 0, "Failed to build framebuffers. (Framebuffers can only be build once)");
 
@@ -259,7 +258,7 @@ impl VkSwapchain {
     }
 
     fn create_image_views(
-        device: Rc<VkLogicalDevice>,
+        device: Arc<VkLogicalDevice>,
         surface_format: vk::Format,
         images: &Vec<vk::Image>,
     ) -> Vec<vk::ImageView> {
@@ -352,15 +351,15 @@ impl VkSwapchain {
         self.current_img
     }
 
-    pub fn image_available_semaphore(&self) -> Rc<VkSemaphore> {
+    pub fn image_available_semaphore(&self) -> Arc<VkSemaphore> {
         self.image_available_semaphores[self.current_frame].clone()
     }
 
-    pub fn render_finished_semaphore(&self) -> Rc<VkSemaphore> {
+    pub fn render_finished_semaphore(&self) -> Arc<VkSemaphore> {
         self.render_finished_semaphores[self.current_frame].clone()
     }
 
-    pub fn present(&mut self, fence: Rc<VkFence>, wait_semaphores: &Vec<&VkSemaphore>) {
+    pub fn present(&mut self, fence: Arc<VkFence>, wait_semaphores: &Vec<&VkSemaphore>) {
         let mut wait_semaphores_raw = Vec::new();
         for wait_semaphore in wait_semaphores {
             wait_semaphores_raw.push(*wait_semaphore.get_semaphore());
