@@ -1,5 +1,7 @@
 use std::{rc::Rc, collections::HashMap};
 
+pub use gpu_allocator::{vulkan::*, AllocatorDebugSettings, MemoryLocation};
+
 use crate::Window;
 
 pub mod vk_device;
@@ -48,6 +50,7 @@ pub struct VkApp {
     instance: VkInstance,
     physical_device: VkPhysicalDevice,
     device: Rc<VkLogicalDevice>,
+    allocator: RcCell<Allocator>,
     graphics_queue: VkCmdQueue,
     present_queue: VkCmdQueue,
     swapchain: Option<RcCell<VkSwapchain>>,
@@ -61,6 +64,14 @@ impl VkApp {
         let instance = VkInstance::new("Chronicle", &window);
         let physical_device = VkPhysicalDevice::new(&instance);
         let device = VkLogicalDevice::new(&instance, &physical_device);
+
+        let allocator = RcCell::new(Allocator::new(&AllocatorCreateDesc {
+            instance: instance.get_instance().clone(),
+            device: device.get_device().clone(),
+            physical_device: physical_device.get_device(),
+            debug_settings: AllocatorDebugSettings::default(),
+            buffer_device_address: false
+        }).unwrap());
 
         let descriptor_pool = VkDescriptorPool::new(device.clone());
 
@@ -87,6 +98,7 @@ impl VkApp {
             instance: instance,
             physical_device: physical_device,
             device: device,
+            allocator: allocator,
             graphics_queue: graphics_queue,
             present_queue: present_queue,
             swapchain: Some(swapchain),
@@ -121,6 +133,10 @@ impl VkApp {
         &self.physical_device
     }
 
+    pub fn get_allocator(&self) -> RcCell<Allocator> {
+        self.allocator.clone()
+    }
+
     pub fn get_cmd_queue(&mut self) -> &mut VkCmdQueue {
         &mut self.graphics_queue
     }
@@ -150,7 +166,8 @@ impl VkApp {
                 for _ in 0..img_count {
                     uniform_buffers.push(RcCell::new(VkUniformBuffer::new::<T>(
                         self.device.clone(),
-                        &self.physical_device
+                        &self.physical_device,
+                        self.allocator.clone(),
                     )));
                 }
 

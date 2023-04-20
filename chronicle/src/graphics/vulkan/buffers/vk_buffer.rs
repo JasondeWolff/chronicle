@@ -6,14 +6,16 @@ use crate::graphics::*;
 
 pub struct VkBuffer {
     device: Rc<VkLogicalDevice>,
+    allocator: RcCell<Allocator>,
     buffer: vk::Buffer,
-    memory: vk::DeviceMemory,
+    allocation: Option<Allocation>,
     size: vk::DeviceSize
 }
 
 impl VkBuffer {
     pub fn new(
         device: Rc<VkLogicalDevice>,
+        allocator: RcCell<Allocator>,
         size: vk::DeviceSize,
         usage: vk::BufferUsageFlags,
         required_memory_properties: vk::MemoryPropertyFlags,
@@ -45,29 +47,32 @@ impl VkBuffer {
             *device_memory_properties,
         );
 
-        let allocate_info = vk::MemoryAllocateInfo {
-            s_type: vk::StructureType::MEMORY_ALLOCATE_INFO,
-            p_next: std::ptr::null(),
-            allocation_size: mem_requirements.size,
-            memory_type_index: memory_type,
+        let location = if required_memory_properties.contains(vk::MemoryPropertyFlags::DEVICE_LOCAL) {
+            MemoryLocation::GpuOnly
+        } else {
+            MemoryLocation::CpuToGpu
         };
 
-        let buffer_memory = unsafe {
-            device.get_device()
-                .allocate_memory(&allocate_info, None)
-                .expect("Failed to allocate vertex buffer memory.")
-        };
+        let allocation = allocator.as_mut()
+            .allocate(&AllocationCreateDesc {
+                name: "VkBuffer",
+                requirements: mem_requirements,
+                location: location,
+                linear: true,
+                allocation_scheme: AllocationScheme::GpuAllocatorManaged
+            }).unwrap();
 
         unsafe {
             device.get_device()
-                .bind_buffer_memory(buffer, buffer_memory, 0)
+                .bind_buffer_memory(buffer, allocation.memory(), allocation.offset())
                 .expect("Failed to bind Buffer.");
         }
 
         VkBuffer {
             device: device,
+            allocator: allocator,
             buffer: buffer,
-            memory: buffer_memory,
+            allocation: Some(allocation),
             size: size
         }
     }
@@ -89,31 +94,14 @@ impl VkBuffer {
     }
 
     pub fn map(&self) -> *mut c_void {
-        unsafe {
-            self.device.get_device()
-                .map_memory(
-                    self.memory,
-                    0,
-                    self.size,
-                    vk::MemoryMapFlags::empty(),
-                )
-                .expect("Failed to Map Memory.")
-        }
+        unsafe { self.allocation.as_ref().unwrap().mapped_ptr().unwrap().as_mut() }
     }
 
     pub fn unmap(&self) {
-        unsafe {
-            self.device.get_device()
-                .unmap_memory(self.memory);
-        }
     }
 
     pub fn get_buffer(&self) -> vk::Buffer {
         self.buffer
-    }
-
-    pub fn get_memory(&self) -> vk::DeviceMemory {
-        self.memory
     }
 
     pub fn get_size(&self) -> vk::DeviceSize {
@@ -124,8 +112,10 @@ impl VkBuffer {
 impl Drop for VkBuffer {
     fn drop(&mut self) {
         unsafe {
-            self.device.get_device()
-                .free_memory(self.memory, None);
+            if let Some(allocation) = self.allocation.take() {
+                self.allocator.as_mut()
+                    .free(allocation).unwrap();
+            }
 
             self.device.get_device()
                 .destroy_buffer(self.buffer, None);

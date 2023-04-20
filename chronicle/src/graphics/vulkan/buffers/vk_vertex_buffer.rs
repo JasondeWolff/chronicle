@@ -19,6 +19,7 @@ impl VkVertexBuffer {
         let vertex_buffer = if dynamic {
             let vertex_buffer = VkBuffer::new(
                 app.get_device().clone(),
+                app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::VERTEX_BUFFER,
                 vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
@@ -35,6 +36,7 @@ impl VkVertexBuffer {
         } else {
             let staging_buffer = VkBuffer::new(
                 app.get_device().clone(),
+                app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_SRC,
                 vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
@@ -49,6 +51,7 @@ impl VkVertexBuffer {
     
             let vertex_buffer = VkBuffer::new(
                 app.get_device().clone(),
+                app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER,
                 vk::MemoryPropertyFlags::DEVICE_LOCAL,

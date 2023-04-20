@@ -8,8 +8,10 @@ use std::os::raw::c_char;
 use std::ptr;
 use std::rc::Rc;
 
-const DEVICE_EXTENSIONS: [&'static str; 1] = [
-    "VK_KHR_swapchain"
+const DEVICE_EXTENSIONS: [&'static str; 3] = [
+    "VK_KHR_swapchain",
+    "VK_KHR_device_group",
+    "VK_KHR_buffer_device_address"
 ];
 
 pub struct QueueFamilyIndices {
@@ -271,8 +273,11 @@ impl VkLogicalDevice {
             ..Default::default()
         };
 
-        let enable_extension_names: [*const c_char; 1] = [
+        let enable_extension_names: [*const c_char; 3] = [
             ash::extensions::khr::Swapchain::name().as_ptr(),
+            ash::extensions::khr::DeviceGroup::name().as_ptr(),
+            ash::extensions::khr::BufferDeviceAddress::name().as_ptr()
+            
         ];
 
         let requred_validation_layer_raw_names: Vec<CString> = VALIDATION

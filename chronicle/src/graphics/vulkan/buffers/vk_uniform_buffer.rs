@@ -11,11 +11,16 @@ pub struct VkUniformBuffer {
 }
 
 impl VkUniformBuffer {
-    pub fn new<T: ToAny>(device: Rc<VkLogicalDevice>, physical_device: &VkPhysicalDevice) -> Self {
+    pub fn new<T: ToAny>(
+        device: Rc<VkLogicalDevice>,
+        physical_device: &VkPhysicalDevice,
+        allocator: RcCell<Allocator>
+    ) -> Self {
         let size = std::mem::size_of::<T>();
 
         let uniform_buffer = Rc::new(VkBuffer::new(
             device,
+            allocator,
             size as u64,
             vk::BufferUsageFlags::UNIFORM_BUFFER,
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,

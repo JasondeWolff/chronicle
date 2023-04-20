@@ -20,6 +20,7 @@ impl VkIndexBuffer {
         let index_buffer = if dynamic {
             let index_buffer = VkBuffer::new(
                 app.get_device().clone(),
+                app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::INDEX_BUFFER,
                 vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
@@ -36,6 +37,7 @@ impl VkIndexBuffer {
         } else {
             let staging_buffer = VkBuffer::new(
                 app.get_device().clone(),
+                app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_SRC,
                 vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
@@ -50,6 +52,7 @@ impl VkIndexBuffer {
 
             let index_buffer = VkBuffer::new(
                 app.get_device().clone(),
+                app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::INDEX_BUFFER,
                 vk::MemoryPropertyFlags::DEVICE_LOCAL,

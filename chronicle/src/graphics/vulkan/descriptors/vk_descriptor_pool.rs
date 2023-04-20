@@ -16,19 +16,6 @@ pub struct VkDescriptorPool {
 
 impl VkDescriptorPool {
     pub fn new(device: Rc<VkLogicalDevice>) -> Rc<Self> {
-        let desc_pool = Self::create_desc_pool(device.clone());
-
-        Rc::new(VkDescriptorPool {
-            device: device,
-            desc_pool: desc_pool
-        })
-    }
-
-    pub fn get_desc_pool(&self) -> vk::DescriptorPool {
-        self.desc_pool
-    }
-
-    fn create_desc_pool(device: Rc<VkLogicalDevice>) -> vk::DescriptorPool {
         let pool_sizes = [
             vk::DescriptorPoolSize {
                 ty: vk::DescriptorType::UNIFORM_BUFFER,
@@ -49,11 +36,20 @@ impl VkDescriptorPool {
             p_pool_sizes: pool_sizes.as_ptr(),
         };
 
-        unsafe {
+        let desc_pool = unsafe {
             device.get_device()
                 .create_descriptor_pool(&descriptor_pool_create_info, None)
                 .expect("Failed to create Descriptor Pool.")
-        }
+        };
+
+        Rc::new(VkDescriptorPool {
+            device: device,
+            desc_pool: desc_pool
+        })
+    }
+
+    pub fn get_desc_pool(&self) -> vk::DescriptorPool {
+        self.desc_pool
     }
 }
 

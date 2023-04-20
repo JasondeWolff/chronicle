@@ -14,8 +14,7 @@ impl VkDescriptorSet {
     pub fn new(
         device: Rc<VkLogicalDevice>,
         desc_pool: Rc<VkDescriptorPool>,
-        desc_layout: Rc<VkDescriptorSetLayout>,
-        _desc_type: vk::DescriptorType
+        desc_layout: Rc<VkDescriptorSetLayout>
     ) -> Rc<Self> {
         let desc_layouts = [desc_layout.get_desc_layout()];
 

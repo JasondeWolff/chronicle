@@ -24,6 +24,7 @@ impl VkTexture {
 
         let staging_buffer = VkBuffer::new(
             app.get_device().clone(),
+            app.get_allocator(),
             image_size,
             vk::BufferUsageFlags::TRANSFER_SRC,
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,

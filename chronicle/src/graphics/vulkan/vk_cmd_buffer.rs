@@ -510,34 +510,7 @@ impl VkCmdBuffer {
         self.desc_layouts.insert(set, layout);
     }
 
-    // fn get_desc_set(&mut self, set: u32) -> &VkDescriptorSet {
-    //     let desc_layout = self.desc_layouts.get(&set)
-    //                                                                 .expect("Failed to set desc buffer. (Missing desc layout_");
-
-    //     let desc_set = match self.desc_sets.get(&set) {
-    //         Some(desc_set) => desc_set,
-    //         None => {
-    //             let desc_set = VkDescriptorSet::new(
-    //                 self.device.clone(),
-    //                 self.desc_pool.clone(),
-    //                 desc_layout.clone()
-    //             );
-    //             self.desc_sets.insert(set, desc_set);
-    //             self.desc_sets.get(&set).as_ref().unwrap()
-    //         }
-    //     };
-
-    //     desc_set
-    // }
-
-    pub fn set_desc_buffer(&mut self,
-        set: u32,
-        binding: u32,
-        desc_type: vk::DescriptorType,
-        uniform_buffer: RcCell<VkUniformBuffer>
-    ) {
-        // let desc_set = self.get_desc_set(set);
-
+    fn get_desc_set(&mut self, set: u32) -> Rc<VkDescriptorSet> {
         let desc_layout = self.desc_layouts.get(&set)
                                                                     .expect("Failed to set desc buffer. (Missing desc layout_");
 
@@ -548,12 +521,23 @@ impl VkCmdBuffer {
                     self.device.clone(),
                     self.desc_pool.clone(),
                     desc_layout.clone(),
-                    desc_type
+
                 );
                 self.desc_sets.insert(set, desc_set);
                 self.desc_sets.get(&set).as_ref().unwrap()
             }
         };
+
+        desc_set.clone()
+    }
+
+    pub fn set_desc_buffer(&mut self,
+        set: u32,
+        binding: u32,
+        desc_type: vk::DescriptorType,
+        uniform_buffer: RcCell<VkUniformBuffer>
+    ) {
+        let desc_set = self.get_desc_set(set);
 
         let descriptor_buffer_info = [vk::DescriptorBufferInfo {
             buffer: uniform_buffer.as_ref().get_buffer(),
@@ -591,22 +575,7 @@ impl VkCmdBuffer {
         sampler: &VkSampler,
         texture: &mut VkTexture
     ) {
-        let desc_layout = self.desc_layouts.get(&set)
-            .expect("Failed to set desc buffer. (Missing desc layout)");
-
-        let desc_set = match self.desc_sets.get(&set) {
-            Some(desc_set) => desc_set,
-            None => {
-                let desc_set = VkDescriptorSet::new(
-                    self.device.clone(),
-                    self.desc_pool.clone(),
-                    desc_layout.clone(),
-                    desc_type
-                );
-                self.desc_sets.insert(set, desc_set);
-                self.desc_sets.get(&set).as_ref().unwrap()
-            }
-        };
+        let desc_set = self.get_desc_set(set);
 
         let descriptor_image_infos = [vk::DescriptorImageInfo {
             sampler: sampler.get_sampler(),

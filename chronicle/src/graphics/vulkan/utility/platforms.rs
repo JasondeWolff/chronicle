@@ -27,6 +27,8 @@ pub fn required_extension_names() -> Vec<*const i8> {
         Surface::name().as_ptr(),
         MacOSSurface::name().as_ptr(),
         DebugUtils::name().as_ptr(),
+        ash::extensions::khr::DeviceGroupCreation::name().as_ptr(),
+        ash::extensions::khr::GetPhysicalDeviceProperties2::name().as_ptr()
     ]
 }
 
@@ -35,7 +37,9 @@ pub fn required_extension_names() -> Vec<*const i8> {
     vec![
         Surface::name().as_ptr(),
         Win32Surface::name().as_ptr(),
-        DebugUtils::name().as_ptr()
+        DebugUtils::name().as_ptr(),
+        ash::extensions::khr::DeviceGroupCreation::name().as_ptr(),
+        ash::extensions::khr::GetPhysicalDeviceProperties2::name().as_ptr()
     ]
 }
 
@@ -45,6 +49,8 @@ pub fn required_extension_names() -> Vec<*const i8> {
         Surface::name().as_ptr(),
         XlibSurface::name().as_ptr(),
         DebugUtils::name().as_ptr(),
+        ash::extensions::khr::DeviceGroupCreation::name().as_ptr(),
+        ash::extensions::khr::GetPhysicalDeviceProperties2::name().as_ptr()
     ]
 }
 // ------------------------------------------------------------------------
