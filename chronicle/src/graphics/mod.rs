@@ -15,12 +15,11 @@ mod vulkan;
 use vulkan::*;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 use ash::vk;
-use cgmath::{Deg, Matrix4};
+use cgmath::Matrix4;
 
 use crate::Window;
-use crate::resources::{Model, Resource, Mesh, Texture, model};
+use crate::resources::{Model, Resource, Texture};
 use crate::common::{RcCell, vec_remove_multiple};
 
 // #[repr(C)]

@@ -139,7 +139,7 @@ impl Renderer {
             height: atlas_texture.height,
             channel_count: 4,
             mip_levels: 1 // Mip mapping???
-        }, "tmp".to_owned());
+        });
         let texture = VkTexture::new(app.clone(), texture);
         let sampler = VkSampler::new(device.clone(), &texture);
 

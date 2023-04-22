@@ -4,8 +4,7 @@ use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone)]
 pub struct Resource<T> {
-    value: Option<Rc<RefCell<T>>>,
-    path: String
+    value: Option<Rc<RefCell<T>>>
 }
 
 impl<T> Hash for Resource<T> {
@@ -34,17 +33,15 @@ impl<T> Eq for Resource<T> {
 }
 
 impl<T> Resource<T> {
-    pub fn new(value: T, path: String) -> Self {
+    pub fn new(value: T) -> Self {
         Resource {
-            value: Some(Rc::new(RefCell::new(value))),
-            path: path
+            value: Some(Rc::new(RefCell::new(value)))
         }
     }
 
     pub fn empty() -> Self {
         Resource {
-            value: None,
-            path: "".to_owned()
+            value: None
         }
     }
 

@@ -13,7 +13,6 @@ impl VkVertexBuffer {
         vertices: &Vec<T>,
         dynamic: bool
     ) -> Self {
-        //let mut app = app.as_mut();
         let size = (std::mem::size_of::<T>() * vertices.len()) as u64;
         
         let vertex_buffer = if dynamic {
@@ -22,8 +21,7 @@ impl VkVertexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::VERTEX_BUFFER,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-                app.get_physical_device().get_mem_properties()
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
             );
     
             unsafe {
@@ -39,8 +37,7 @@ impl VkVertexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_SRC,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-                app.get_physical_device().get_mem_properties()
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
             );
     
             unsafe {
@@ -54,8 +51,7 @@ impl VkVertexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                app.get_physical_device().get_mem_properties()
+                vk::MemoryPropertyFlags::DEVICE_LOCAL
             );
     
             let cmd_queue = app.get_cmd_queue();

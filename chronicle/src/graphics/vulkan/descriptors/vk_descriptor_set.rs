@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use ash::vk;
 
 use crate::graphics::*;

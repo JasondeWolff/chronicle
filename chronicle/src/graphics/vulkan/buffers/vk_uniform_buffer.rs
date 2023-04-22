@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use ash::vk;
 
 use crate::graphics::*;
@@ -23,8 +21,7 @@ impl VkUniformBuffer {
             allocator,
             size as u64,
             vk::BufferUsageFlags::UNIFORM_BUFFER,
-            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-            physical_device.get_mem_properties()
+            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
         ));
 
         let data = uniform_buffer.map() as *mut T;

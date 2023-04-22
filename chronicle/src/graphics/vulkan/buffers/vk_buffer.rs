@@ -1,4 +1,4 @@
-use std::{rc::Rc, ffi::c_void};
+use std::ffi::c_void;
 
 use ash::vk;
 
@@ -18,8 +18,7 @@ impl VkBuffer {
         allocator: ArcMutex<Allocator>,
         size: vk::DeviceSize,
         usage: vk::BufferUsageFlags,
-        required_memory_properties: vk::MemoryPropertyFlags,
-        device_memory_properties: &vk::PhysicalDeviceMemoryProperties,
+        required_memory_properties: vk::MemoryPropertyFlags
     ) -> Self {
         let buffer_create_info = vk::BufferCreateInfo {
             s_type: vk::StructureType::BUFFER_CREATE_INFO,
@@ -41,11 +40,6 @@ impl VkBuffer {
         let mem_requirements = unsafe {
             device.get_device().get_buffer_memory_requirements(buffer)
         };
-        let memory_type = Self::find_memory_type(
-            mem_requirements.memory_type_bits,
-            required_memory_properties,
-            *device_memory_properties,
-        );
 
         let location = if required_memory_properties.contains(vk::MemoryPropertyFlags::DEVICE_LOCAL) {
             MemoryLocation::GpuOnly

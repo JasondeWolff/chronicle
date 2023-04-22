@@ -6,7 +6,6 @@ use utility::constants::VALIDATION;
 use std::ffi::CString;
 use std::os::raw::c_char;
 use std::ptr;
-use std::rc::Rc;
 
 const DEVICE_EXTENSIONS: [&'static str; 3] = [
     "VK_KHR_swapchain",

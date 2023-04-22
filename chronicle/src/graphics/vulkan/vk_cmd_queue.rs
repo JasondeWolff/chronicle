@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::collections::VecDeque;
 use std::sync::Mutex;
-use std::thread::Thread;
 
 use ash::vk;
 

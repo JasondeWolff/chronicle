@@ -1,15 +1,18 @@
-use std::rc::Rc;
-
 use crate::resources::{Model, Resource};
 use crate::common::{RcCell};
 
 use super::Camera;
 use super::Transform;
-use super::vulkan::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DynamicRenderModelProperties {
     pub transform: Transform
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RenderCameraProperties {
+    pub camera: Camera,
+    pub main: bool
 }
 
 pub(super) struct DynamicRenderModel {
@@ -21,12 +24,6 @@ impl DynamicRenderModel {
     pub(super) fn is_active(&self) -> bool {
         self.properties.strong_count() > 1
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RenderCameraProperties {
-    pub camera: Camera,
-    pub main: bool
 }
 
 pub(super) struct RenderCamera {

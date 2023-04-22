@@ -27,8 +27,7 @@ impl VkTexture {
             app.get_allocator(),
             image_size,
             vk::BufferUsageFlags::TRANSFER_SRC,
-            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-            app.get_physical_device().get_mem_properties()
+            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
         );
 
         unsafe {

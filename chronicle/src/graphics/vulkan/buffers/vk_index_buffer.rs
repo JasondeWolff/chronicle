@@ -14,7 +14,6 @@ impl VkIndexBuffer {
         indices: &Vec<u32>,
         dynamic: bool
     ) -> Self {
-        //let mut app = app.as_mut();
         let size: u64 = (std::mem::size_of::<u32>() * indices.len()) as u64;
 
         let index_buffer = if dynamic {
@@ -23,8 +22,7 @@ impl VkIndexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::INDEX_BUFFER,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-                app.get_physical_device().get_mem_properties()
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
             );
     
             unsafe {
@@ -40,8 +38,7 @@ impl VkIndexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_SRC,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-                app.get_physical_device().get_mem_properties()
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
             );
 
             unsafe {
@@ -55,8 +52,7 @@ impl VkIndexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::INDEX_BUFFER,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                app.get_physical_device().get_mem_properties()
+                vk::MemoryPropertyFlags::DEVICE_LOCAL
             );
 
             let cmd_queue = app.get_cmd_queue();
