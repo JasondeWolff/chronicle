@@ -7,10 +7,36 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use std::ptr;
 
-const DEVICE_EXTENSIONS: [&'static str; 3] = [
+// Depenedents chain down E.G.
+// "VK_KHR_A"
+// "VK_KHR_B" (required for VK_KHR_A)
+// "VK_KHR_C" (required for VK_KHR_B)
+const DEVICE_EXTENSIONS: [&'static str; 9] = [
     "VK_KHR_swapchain",
+
     "VK_KHR_device_group",
-    "VK_KHR_buffer_device_address"
+    "VK_KHR_buffer_device_address",
+
+    "VK_KHR_acceleration_structure",
+    "VK_EXT_descriptor_indexing",
+
+    "VK_KHR_ray_tracing_pipeline",
+
+    "VK_KHR_deferred_host_operations",
+    "VK_KHR_spirv_1_4",
+    "VK_KHR_shader_float_controls"
+];
+
+const ENABLE_EXTENSION_NAMES: [*const c_char; 9] = [
+    ash::extensions::khr::Swapchain::name().as_ptr(),
+    ash::extensions::khr::DeviceGroup::name().as_ptr(),
+    ash::extensions::khr::BufferDeviceAddress::name().as_ptr(),
+    ash::extensions::khr::AccelerationStructure::name().as_ptr(),
+    ash::vk::ExtDescriptorIndexingFn::name().as_ptr(),
+    ash::extensions::khr::RayTracingPipeline::name().as_ptr(),
+    ash::extensions::khr::DeferredHostOperations::name().as_ptr(),
+    ash::vk::KhrSpirv14Fn::name().as_ptr(),
+    ash::vk::KhrShaderFloatControlsFn::name().as_ptr()
 ];
 
 pub struct QueueFamilyIndices {
@@ -93,8 +119,18 @@ impl VkPhysicalDevice {
         surface: vk::SurfaceKHR
     ) -> bool {
         let device_features = unsafe { instance.get_physical_device_features(physical_device) };
-        let device_properties = unsafe { instance.get_physical_device_properties(physical_device) };
-        if device_properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU {
+        
+        let mut rt_properties = vk::PhysicalDeviceRayTracingPipelinePropertiesKHR {
+            s_type: vk::StructureType::PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
+            ..Default::default()
+        };
+        let mut device_properties = vk::PhysicalDeviceProperties2 {
+            s_type: vk::StructureType::PHYSICAL_DEVICE_PROPERTIES_2,
+            p_next: &mut rt_properties as *mut vk::PhysicalDeviceRayTracingPipelinePropertiesKHR as *mut std::ffi::c_void,
+            ..Default::default()
+        };
+        unsafe { instance.get_physical_device_properties2(physical_device, &mut device_properties) };
+        if device_properties.properties.device_type != vk::PhysicalDeviceType::DISCRETE_GPU {
             return false;
         }
 
@@ -272,13 +308,6 @@ impl VkLogicalDevice {
             ..Default::default()
         };
 
-        let enable_extension_names: [*const c_char; 3] = [
-            ash::extensions::khr::Swapchain::name().as_ptr(),
-            ash::extensions::khr::DeviceGroup::name().as_ptr(),
-            ash::extensions::khr::BufferDeviceAddress::name().as_ptr()
-            
-        ];
-
         let requred_validation_layer_raw_names: Vec<CString> = VALIDATION
             .required_validation_layers
             .iter()
@@ -305,8 +334,8 @@ impl VkLogicalDevice {
             } else {
                 ptr::null()
             },
-            enabled_extension_count: enable_extension_names.len() as u32,
-            pp_enabled_extension_names: enable_extension_names.as_ptr(),
+            enabled_extension_count: ENABLE_EXTENSION_NAMES.len() as u32,
+            pp_enabled_extension_names: ENABLE_EXTENSION_NAMES.as_ptr(),
             p_enabled_features: &physical_device_features,
         };
 
