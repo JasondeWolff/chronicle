@@ -48,7 +48,7 @@ impl Game for Example {
                 let dyn_render_model = app().graphics()
                     .create_dynamic_model(self.helmet_model.as_ref().unwrap().clone());
 
-                let translation = Vector3::new(x as f32 * 2.0, y as f32 * 2.0, 0.0);
+                let translation = Vector3::new(x as f32 * 2.0, y as f32 * 2.0, -15.0);
                 dyn_render_model.as_mut().transform.set_translation(&translation);
 
                 self.helmet_render_models.push(dyn_render_model);
