@@ -19,7 +19,7 @@ use ash::vk;
 use cgmath::Matrix4;
 
 use crate::Window;
-use crate::resources::{Model, Resource, Texture};
+use crate::resources::{Model, Resource, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
 // #[repr(C)]
@@ -50,6 +50,8 @@ pub struct Renderer {
     pipeline: Arc<VkPipeline>,
 
     descriptor_layout: Arc<VkDescriptorSetLayout>,
+
+    tlas: ArcMutex<VkTlas>,
 
     models: HashMap<Resource<Model>, Vec<VkMesh>>,
     textures: HashMap<Resource<Texture>, VkTexture>,
@@ -149,6 +151,8 @@ impl Renderer {
             );
         }
 
+        let tlas = VkTlas::new();
+
         let app = ArcMutex::new(app);
         let imgui = VkImGui::new(
             app.clone(),
@@ -164,6 +168,8 @@ impl Renderer {
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
 
+            tlas: tlas,
+
             models: HashMap::new(),
             textures: HashMap::new(),
             samplers: HashMap::new(),
@@ -177,6 +183,8 @@ impl Renderer {
         self.app.as_mut().update();
 
         self.remove_unused_resources();
+
+        self.rebuild_tlas();
         self.render();
     }
 
@@ -207,6 +215,36 @@ impl Renderer {
             }
             vec_remove_multiple(&mut self.dynamic_models, &mut indices_to_remove);
         }
+    }
+
+    fn rebuild_tlas(&mut self) {
+        let mut blas_instances = Vec::new();
+
+        let mut custom_idx = 0;
+        for dynamic_model in self.dynamic_models.iter() {
+            let mut model_properties = dynamic_model.properties.as_mut();
+            let model_matrix = model_properties.transform.get_matrix(false);
+
+            let vk_meshes = self.models.get(&dynamic_model.model_resource).unwrap();
+            for (i, mesh) in dynamic_model.model_resource.as_ref().meshes.iter().enumerate() {
+                let blas = vk_meshes[i].get_blas();
+
+                blas_instances.push(VkBlasInstance::new(
+                    *model_matrix,
+                    blas,
+                    custom_idx,
+                    0xFF
+                ));
+
+                custom_idx += 1;
+            }
+        }
+
+        self.tlas.as_mut().rebuild(
+            &mut self.app.as_mut(),
+            &blas_instances,
+            vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_TRACE
+        );
     }
 
     fn render(&mut self) {

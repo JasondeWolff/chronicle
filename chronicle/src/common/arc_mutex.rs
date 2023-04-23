@@ -18,11 +18,11 @@ impl<T> ArcMutex<T> {
     }
 
     pub fn as_ref(&self) -> MutexGuard<'_, T> {
-        self.value.as_ref().lock().unwrap()
+        self.value.as_ref().lock().expect("Failed to lock ArcMutex")
     }
 
     pub fn as_mut(&self) -> MutexGuard<'_, T> {
-        self.value.as_ref().lock().unwrap()
+        self.value.as_ref().lock().expect("Failed to lock ArcMutex")
     }
 
     pub fn clone(&self) -> ArcMutex<T> {

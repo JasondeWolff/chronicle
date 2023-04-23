@@ -22,6 +22,7 @@ pub struct VkLogicalDevice {
     device: ash::Device,
     queue_indices: QueueFamilyIndices,
 
+    debug_utils_loader: ash::extensions::ext::DebugUtils,
     raytracing_loader: ash::extensions::khr::RayTracingPipeline,
     accel_loader: ash::extensions::khr::AccelerationStructure,
     buffer_device_address_loader: ash::extensions::khr::BufferDeviceAddress
@@ -114,10 +115,12 @@ impl VkLogicalDevice {
         let raytracing_loader = ash::extensions::khr::RayTracingPipeline::new(instance.get_instance(), &device);
         let accel_loader = ash::extensions::khr::AccelerationStructure::new(instance.get_instance(), &device);
         let buffer_device_address_loader = ash::extensions::khr::BufferDeviceAddress::new(instance.get_instance(), &device);
+        let debug_utils_loader = ash::extensions::ext::DebugUtils::new(instance.get_entry(), instance.get_instance());
 
         Arc::new(VkLogicalDevice {
             device: device,
             queue_indices: indices,
+            debug_utils_loader: debug_utils_loader,
             raytracing_loader: raytracing_loader,
             accel_loader: accel_loader,
             buffer_device_address_loader: buffer_device_address_loader
@@ -146,6 +149,10 @@ impl VkLogicalDevice {
 
     pub fn get_queue_family_indices(&self) -> &QueueFamilyIndices {
         &self.queue_indices
+    }
+
+    pub fn debug_utils_loader(&self) -> &ash::extensions::ext::DebugUtils {
+        &self.debug_utils_loader
     }
 
     pub fn raytracing_loader(&self) -> &ash::extensions::khr::RayTracingPipeline {

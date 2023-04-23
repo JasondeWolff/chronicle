@@ -35,4 +35,8 @@ impl VkMesh {
         cmd_buffer.bind_index_buffer(&self.index_buffer);
         cmd_buffer.draw_indexed(self.index_buffer.index_count(), 1, 0, 0, 0);
     }
+
+    pub fn get_blas(&self) -> ArcMutex<VkBlas> {
+        self.blas.clone()
+    }
 }

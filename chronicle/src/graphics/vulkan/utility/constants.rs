@@ -12,8 +12,6 @@ pub const VALIDATION: ValidationInfo = ValidationInfo {
     required_validation_layers: ["VK_LAYER_KHRONOS_validation"],
 };
 
-pub const MAX_FRAMES_IN_FLIGHT: usize = 3;
-
 // Depenedents chain down E.G.
 // "VK_KHR_A"
 // "VK_KHR_B" (required for VK_KHR_A)
@@ -45,3 +43,5 @@ pub const ENABLE_EXTENSION_NAMES: [*const std::ffi::c_char; 9] = [
     ash::vk::KhrSpirv14Fn::name().as_ptr(),
     ash::vk::KhrShaderFloatControlsFn::name().as_ptr()
 ];
+
+pub const MAX_FRAMES_IN_FLIGHT: usize = 3;

@@ -9,11 +9,14 @@ pub struct VkBuffer {
     allocator: ArcMutex<Allocator>,
     buffer: vk::Buffer,
     allocation: Option<Allocation>,
-    size: vk::DeviceSize
+    size: vk::DeviceSize,
+
+    name: String
 }
 
 impl VkBuffer {
     pub fn new(
+        name: &'static str,
         device: Arc<VkLogicalDevice>,
         allocator: ArcMutex<Allocator>,
         size: vk::DeviceSize,
@@ -66,13 +69,17 @@ impl VkBuffer {
                 .expect("Failed to bind Buffer.");
         }
 
-        VkBuffer {
+        let mut buffer = VkBuffer {
             device: device,
             allocator: allocator,
             buffer: buffer,
             allocation: Some(allocation),
-            size: size
-        }
+            size: size,
+            name: String::from(name)
+        };
+
+        buffer.set_debug_name(name);
+        buffer
     }
 
     pub fn find_memory_type(
@@ -117,6 +124,29 @@ impl VkBuffer {
             self.device.buffer_device_address_loader()
                 .get_buffer_device_address(&info)
         }
+    }
+
+    pub fn set_debug_name(&mut self, name: &'static str) {
+        let handle: u64 = unsafe {
+            std::mem::transmute(self.buffer)
+        };
+
+        let info = vk::DebugUtilsObjectNameInfoEXT::builder()
+            .object_type(vk::ObjectType::BUFFER)
+            .object_handle(handle)
+            .object_name(&std::ffi::CString::new(name).unwrap())
+            .build();
+
+        unsafe {
+            self.device.debug_utils_loader()
+                .set_debug_utils_object_name(
+                    self.device.get_device().handle(),
+                    &info
+                )
+                .expect("Failed to set debug name.");
+        }
+
+        self.name = String::from(name);
     }
 }
 

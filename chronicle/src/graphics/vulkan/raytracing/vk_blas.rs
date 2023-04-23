@@ -72,6 +72,10 @@ impl VkBlas {
         })
     }
 
+    pub fn get_accel_ref(&self) -> vk::AccelerationStructureReferenceKHR {
+        self.accel.as_ref().unwrap().get_accel_ref()
+    }
+
     pub fn build(
         app: &mut VkApp,
         blases: &Vec<ArcMutex<VkBlas>>,
@@ -122,6 +126,7 @@ impl VkBlas {
 
         // Create a temp staging buffer
         let scratch_buffer = VkBuffer::new(
+            "Blas scratch buffer",
             device.clone(),
             app.get_allocator(),
             max_scratch_size,

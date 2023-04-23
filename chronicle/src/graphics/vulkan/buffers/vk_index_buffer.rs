@@ -18,6 +18,7 @@ impl VkIndexBuffer {
 
         let index_buffer = if dynamic {
             let index_buffer = VkBuffer::new(
+                "Index buffer",
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
@@ -35,6 +36,7 @@ impl VkIndexBuffer {
             index_buffer
         } else {
             let staging_buffer = VkBuffer::new(
+                "Index staging buffer",
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
@@ -50,6 +52,7 @@ impl VkIndexBuffer {
             }
 
             let index_buffer = VkBuffer::new(
+                "Index buffer",
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,

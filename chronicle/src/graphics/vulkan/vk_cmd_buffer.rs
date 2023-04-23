@@ -655,6 +655,31 @@ impl VkCmdBuffer {
         }
     }
 
+    pub fn barrier(&self,
+        src_access_mask: vk::AccessFlags,
+        dst_access_mask: vk::AccessFlags,
+        src_stage_mask: vk::PipelineStageFlags,
+        dst_stage_mask: vk::PipelineStageFlags
+    ) {
+        let barrier = vk::MemoryBarrier::builder()
+            .src_access_mask(src_access_mask)
+            .dst_access_mask(dst_access_mask)
+            .build();
+
+        unsafe {
+            self.device.get_device()
+                .cmd_pipeline_barrier(
+                    self.cmd_buffer,
+                    src_stage_mask,
+                    dst_stage_mask,
+                    vk::DependencyFlags::empty(),
+                    &[barrier],
+                    &[],
+                    &[]
+                );
+        }
+    }
+
     pub fn create_blas(&self,
         build_infos: &mut Vec<VkAccelBuildInfo>,
         indices: &Vec<usize>,
@@ -693,23 +718,14 @@ impl VkCmdBuffer {
                     );
             }
 
-            let barrier = vk::MemoryBarrier::builder()
-                .src_access_mask(vk::AccessFlags::ACCELERATION_STRUCTURE_WRITE_KHR)
-                .dst_access_mask(vk::AccessFlags::ACCELERATION_STRUCTURE_READ_KHR)
-                .build();
+            self.barrier(
+                vk::AccessFlags::ACCELERATION_STRUCTURE_WRITE_KHR,
+                vk::AccessFlags::ACCELERATION_STRUCTURE_READ_KHR,
+                vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
+                vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR
+            );
 
             unsafe {
-                self.device.get_device()
-                    .cmd_pipeline_barrier(
-                        self.cmd_buffer,
-                        vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
-                        vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
-                        vk::DependencyFlags::empty(),
-                        &[barrier],
-                        &[],
-                        &[]
-                    );
-                
                 if let Some(query_pool) = &query_pool {
                     self.device.accel_loader()
                         .cmd_write_acceleration_structures_properties(
@@ -761,6 +777,104 @@ impl VkCmdBuffer {
                         &copy_info
                     );
             }
+        }
+    }
+
+    pub fn create_tlas(&mut self,
+        tlas: Option<ArcMutex<VkAccel>>,
+        instance_count: u32,
+        instance_buffer_address: vk::DeviceAddress,
+        build_flags: vk::BuildAccelerationStructureFlagsKHR,
+        update: bool,
+        accel_props: &vk::PhysicalDeviceAccelerationStructurePropertiesKHR
+    ) -> Option<ArcMutex<VkAccel>> {
+        assert!(!(tlas.is_none() && update), "Failed to create tlas.");
+
+        let instance_data = vk::AccelerationStructureGeometryInstancesDataKHR::builder()
+            .data(vk::DeviceOrHostAddressConstKHR {
+                device_address: instance_buffer_address
+            })
+            .build();
+
+        let top_as_geometry = vk::AccelerationStructureGeometryKHR::builder()
+            .geometry_type(vk::GeometryTypeKHR::INSTANCES)
+            .geometry(vk::AccelerationStructureGeometryDataKHR {
+                instances: instance_data
+            })
+            .build();
+
+        let mode = if update {
+            vk::BuildAccelerationStructureModeKHR::UPDATE
+        } else {
+            vk::BuildAccelerationStructureModeKHR::BUILD
+        };
+
+        let mut build_info = vk::AccelerationStructureBuildGeometryInfoKHR::builder()
+            .flags(build_flags)
+            .geometries(&[top_as_geometry])
+            .mode(mode)
+            .ty(vk::AccelerationStructureTypeKHR::TOP_LEVEL)
+            .build();
+
+        let size_info = unsafe {
+            self.device.accel_loader()
+                .get_acceleration_structure_build_sizes(
+                    vk::AccelerationStructureBuildTypeKHR::DEVICE,
+                    &build_info,
+                    &[instance_count]
+                )
+        };
+
+        let tlas = if !update {
+            let mut create_info = vk::AccelerationStructureCreateInfoKHR::builder()
+                .ty(vk::AccelerationStructureTypeKHR::TOP_LEVEL)
+                .size(size_info.acceleration_structure_size)
+                .build();
+
+            ArcMutex::new(VkAccel::new(
+                self.device.clone(),
+                self.allocator.clone(),
+                &mut create_info
+            ))
+        } else {
+            tlas.as_ref().unwrap().clone()
+        };
+
+        let scratch_buffer = Arc::new(VkBuffer::new(
+            "Tlas scratch buffer",
+            self.device.clone(),
+            self.allocator.clone(),
+            size_info.build_scratch_size,
+            vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::STORAGE_BUFFER,
+            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            Some(accel_props.min_acceleration_structure_scratch_offset_alignment as u64)
+        ));
+        self.tracked_buffers.push(scratch_buffer.clone());
+        let scratch_address = scratch_buffer.get_device_address();
+
+        if update {
+            build_info.src_acceleration_structure = tlas.as_ref().get_accel();
+        }
+        build_info.dst_acceleration_structure = tlas.as_ref().get_accel();
+        build_info.scratch_data.device_address = scratch_address;
+
+        let range_info = vk::AccelerationStructureBuildRangeInfoKHR::builder()
+            .primitive_count(instance_count)
+            .build();
+
+        unsafe {
+            self.device.accel_loader()
+                .cmd_build_acceleration_structures(
+                    self.cmd_buffer,
+                    &[build_info],
+                    &[&[range_info]]
+                );
+        }
+
+        if !update {
+            Some(tlas.clone())
+        } else {
+            None
         }
     }
 }

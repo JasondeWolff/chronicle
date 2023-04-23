@@ -17,6 +17,7 @@ impl VkUniformBuffer {
         let size = std::mem::size_of::<T>();
 
         let uniform_buffer = Arc::new(VkBuffer::new(
+            "Uniform buffer",
             device,
             allocator,
             size as u64,

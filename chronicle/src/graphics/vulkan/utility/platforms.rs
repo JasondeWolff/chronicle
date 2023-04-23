@@ -39,7 +39,8 @@ pub fn required_extension_names() -> Vec<*const i8> {
         Win32Surface::name().as_ptr(),
         DebugUtils::name().as_ptr(),
         ash::extensions::khr::DeviceGroupCreation::name().as_ptr(),
-        ash::extensions::khr::GetPhysicalDeviceProperties2::name().as_ptr()
+        ash::extensions::khr::GetPhysicalDeviceProperties2::name().as_ptr(),
+        ash::extensions::ext::DebugUtils::name().as_ptr()
     ]
 }
 

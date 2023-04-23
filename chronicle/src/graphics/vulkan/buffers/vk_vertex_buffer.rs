@@ -19,6 +19,7 @@ impl VkVertexBuffer {
         
         let vertex_buffer = if dynamic {
             let vertex_buffer = VkBuffer::new(
+                "Vertex buffer",
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
@@ -36,6 +37,7 @@ impl VkVertexBuffer {
             vertex_buffer
         } else {
             let staging_buffer = VkBuffer::new(
+                "Vertex staging buffer",
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
@@ -51,6 +53,7 @@ impl VkVertexBuffer {
             }
     
             let vertex_buffer = VkBuffer::new(
+                "Vertex buffer",
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
