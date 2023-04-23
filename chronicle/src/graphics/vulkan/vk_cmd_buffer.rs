@@ -802,16 +802,17 @@ impl VkCmdBuffer {
                 instances: instance_data
             })
             .build();
+        let geometries = vec![top_as_geometry];
 
         let mode = if update {
             vk::BuildAccelerationStructureModeKHR::UPDATE
         } else {
             vk::BuildAccelerationStructureModeKHR::BUILD
         };
-
+        
         let mut build_info = vk::AccelerationStructureBuildGeometryInfoKHR::builder()
             .flags(build_flags)
-            .geometries(&[top_as_geometry])
+            .geometries(&geometries)
             .mode(mode)
             .ty(vk::AccelerationStructureTypeKHR::TOP_LEVEL)
             .build();
