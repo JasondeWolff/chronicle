@@ -4,10 +4,12 @@ pub use gpu_allocator::{vulkan::*, AllocatorDebugSettings, MemoryLocation};
 
 use crate::Window;
 
-pub mod vk_device;
-pub use vk_device::*;
 pub mod vk_instance;
 pub use vk_instance::*;
+pub mod vk_physical_device;
+pub use vk_physical_device::*;
+pub mod vk_logical_device;
+pub use vk_logical_device::*;
 pub mod vk_shader_module;
 pub use vk_shader_module::*;
 pub mod vk_render_pass;
