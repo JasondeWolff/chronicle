@@ -19,7 +19,7 @@ impl VkMesh {
         let blas = VkBlas::new(
             &vertex_buffer,
             &index_buffer,
-            vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_BUILD
+            vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_BUILD | vk::BuildAccelerationStructureFlagsKHR::ALLOW_COMPACTION
         );
         VkBlas::build(app, &vec![blas.clone()], vk::AccelerationStructureBuildTypeKHR::DEVICE);
 

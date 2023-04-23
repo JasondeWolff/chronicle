@@ -58,8 +58,14 @@ impl VkLogicalDevice {
             ..Default::default()
         };
 
+        let mut host_query_reset_features = vk::PhysicalDeviceHostQueryResetFeatures  {
+            host_query_reset: 1,
+            ..Default::default()
+        };
+
         let mut buffer_device_address_features = vk::PhysicalDeviceBufferDeviceAddressFeaturesEXT {
             buffer_device_address: 1,
+            p_next: &mut host_query_reset_features as *mut vk::PhysicalDeviceHostQueryResetFeatures as *mut std::ffi::c_void,
             ..Default::default()
         };
 
