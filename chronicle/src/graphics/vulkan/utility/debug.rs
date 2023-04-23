@@ -24,7 +24,12 @@ unsafe extern "system" fn vulkan_debug_utils_callback(
         _ => "[Unknown]",
     };
     let message = CStr::from_ptr((*p_callback_data).p_message);
-    println!("[Debug]{}{}{:?}", severity, types, message);
+
+    if message_severity == vk::DebugUtilsMessageSeverityFlagsEXT::ERROR {
+        panic!("[Debug]{}{}{:?}", severity, types, message);
+    } else {
+        println!("[Debug]{}{}{:?}", severity, types, message);
+    }
 
     vk::FALSE
 }

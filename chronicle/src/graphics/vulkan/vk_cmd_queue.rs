@@ -13,6 +13,8 @@ struct InFlightCmdBuffer {
 
 pub struct VkCmdQueue {
     device: Arc<VkLogicalDevice>,
+    allocator: ArcMutex<Allocator>,
+
     desc_pool: Arc<VkDescriptorPool>,
     queue: vk::Queue,
     cmd_pool: Arc<VkCmdPool>,
@@ -30,6 +32,7 @@ pub enum VkQueueType {
 impl VkCmdQueue {
     pub fn new(
         device: Arc<VkLogicalDevice>,
+        allocator: ArcMutex<Allocator>,
         desc_pool: Arc<VkDescriptorPool>,
         queue: vk::Queue,
         queue_type: VkQueueType
@@ -38,6 +41,7 @@ impl VkCmdQueue {
 
         let queue = ArcMutex::new(VkCmdQueue {
             device: device,
+            allocator: allocator,
             desc_pool: desc_pool,
             queue: queue,
             cmd_pool: cmd_pool,
@@ -67,6 +71,7 @@ impl VkCmdQueue {
             None => {
                 ArcMutex::new(VkCmdBuffer::new(
                     self.device.clone(),
+                    self.allocator.clone(),
                     self.cmd_pool.clone(),
                     self.desc_pool.clone()
                 ))

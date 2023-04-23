@@ -14,7 +14,7 @@ license = "MIT"
 
 [dependencies]
 winit     = "0.28.3"
-ash       = "0.37.2"
+ash       = "0.37.2+1.3.238"
 gpu-allocator = "0.22.0"
 num       = "0.2"
 cgmath    = "0.17.0"
@@ -23,6 +23,7 @@ bitmask-enum = "2.1.0"
 stb_image = "0.2.4"
 gltf = "1.0.0"
 imgui = "0.10.0"
+byte-unit = "4.0.19"
 
 [dependencies.bitflags]
 version = ">= 1.0.4"

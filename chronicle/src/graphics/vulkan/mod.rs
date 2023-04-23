@@ -39,6 +39,10 @@ pub mod vk_sampler;
 pub use vk_sampler::*;
 pub mod vk_imgui;
 pub use vk_imgui::*;
+pub mod vk_query_pool;
+pub use vk_query_pool::*;
+pub mod raytracing;
+pub use raytracing::*;
 
 use crate::graphics::*;
 
@@ -77,12 +81,14 @@ impl VkApp {
 
         let graphics_queue = VkCmdQueue::new(
             device.clone(),
+            allocator.clone(),
             descriptor_pool.clone(),
             device.get_graphics_queue(),
             VkQueueType::GRAPHICS
         );
         let present_queue = VkCmdQueue::new(
             device.clone(),
+            allocator.clone(),
             descriptor_pool.clone(),
             device.get_present_queue(),
             VkQueueType::PRESENT
@@ -123,12 +129,16 @@ impl VkApp {
         }
     }
 
-    pub fn get_device(&self) -> Arc<VkLogicalDevice> {
-        self.device.clone()
+    pub fn get_instance(&self) -> &VkInstance {
+        &self.instance
     }
 
     pub fn get_physical_device(&self) -> &VkPhysicalDevice {
         &self.physical_device
+    }
+
+    pub fn get_device(&self) -> Arc<VkLogicalDevice> {
+        self.device.clone()
     }
 
     pub fn get_allocator(&self) -> ArcMutex<Allocator> {

@@ -3,7 +3,8 @@ use crate::resources::Vertex;
 
 pub struct VkMesh {
     vertex_buffer: VkVertexBuffer,
-    index_buffer: VkIndexBuffer
+    index_buffer: VkIndexBuffer,
+    blas: ArcMutex<VkBlas>
 }
 
 impl VkMesh {
@@ -12,9 +13,20 @@ impl VkMesh {
         vertices: &Vec<Vertex>,
         indices: &Vec<u32>
     ) -> Self {
+        let vertex_buffer = VkVertexBuffer::new(app, vertices, false);
+        let index_buffer = VkIndexBuffer::new(app, indices, false);
+
+        let blas = VkBlas::new(
+            &vertex_buffer,
+            &index_buffer,
+            vk::BuildAccelerationStructureFlagsKHR::PREFER_FAST_BUILD
+        );
+        VkBlas::build(app, &vec![blas.clone()], vk::AccelerationStructureBuildTypeKHR::DEVICE);
+
         VkMesh {
-            vertex_buffer: VkVertexBuffer::new(app, vertices, false),
-            index_buffer: VkIndexBuffer::new(app, indices, false)
+            vertex_buffer: vertex_buffer,
+            index_buffer: index_buffer,
+            blas: blas
         }
     }
 

@@ -21,8 +21,9 @@ impl VkIndexBuffer {
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
-                vk::BufferUsageFlags::INDEX_BUFFER,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
+                vk::BufferUsageFlags::INDEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR,
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+                None
             );
     
             unsafe {
@@ -38,7 +39,8 @@ impl VkIndexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_SRC,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+                None
             );
 
             unsafe {
@@ -51,8 +53,9 @@ impl VkIndexBuffer {
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
-                vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::INDEX_BUFFER,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL
+                vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::INDEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR,
+                vk::MemoryPropertyFlags::DEVICE_LOCAL,
+                None
             );
 
             let cmd_queue = app.get_cmd_queue();
@@ -76,12 +79,8 @@ impl VkIndexBuffer {
         }
     }
 
-    pub fn track_buffer(&self) -> Arc<VkBuffer> {
+    pub fn get_buffer(&self) -> Arc<VkBuffer> {
         self.index_buffer.clone()
-    }
-
-    pub fn get_buffer(&self) -> vk::Buffer {
-        self.index_buffer.get_buffer()
     }
 
     pub fn index_count(&self) -> u32 {

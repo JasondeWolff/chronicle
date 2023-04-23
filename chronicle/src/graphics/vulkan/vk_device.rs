@@ -53,12 +53,19 @@ impl QueueFamilyIndices {
 pub struct VkPhysicalDevice {
     device: vk::PhysicalDevice,
     mem_properties: vk::PhysicalDeviceMemoryProperties,
-    max_sample_count: vk::SampleCountFlags
+    max_sample_count: vk::SampleCountFlags,
+
+    raytracing_pipeline_props: vk::PhysicalDeviceRayTracingPipelinePropertiesKHR,
+    accel_props: vk::PhysicalDeviceAccelerationStructurePropertiesKHR
 }
 
 pub struct VkLogicalDevice {
     device: ash::Device,
-    queue_indices: QueueFamilyIndices
+    queue_indices: QueueFamilyIndices,
+
+    raytracing_loader: ash::extensions::khr::RayTracingPipeline,
+    accel_loader: ash::extensions::khr::AccelerationStructure,
+    buffer_device_address_loader: ash::extensions::khr::BufferDeviceAddress
 }
 
 impl VkPhysicalDevice {
@@ -79,10 +86,17 @@ impl VkPhysicalDevice {
             device
         );
 
+        let (raytracing_pipeline_props, accel_props) = Self::raytracing_properties(
+            instance.get_instance(),
+            device
+        );
+
         VkPhysicalDevice {
-            device: device,
-            mem_properties: mem_properties,
-            max_sample_count: max_sample_count
+            device,
+            mem_properties,
+            max_sample_count,
+            raytracing_pipeline_props,
+            accel_props
         }
     }
 
@@ -120,13 +134,8 @@ impl VkPhysicalDevice {
     ) -> bool {
         let device_features = unsafe { instance.get_physical_device_features(physical_device) };
         
-        let mut rt_properties = vk::PhysicalDeviceRayTracingPipelinePropertiesKHR {
-            s_type: vk::StructureType::PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
-            ..Default::default()
-        };
         let mut device_properties = vk::PhysicalDeviceProperties2 {
             s_type: vk::StructureType::PHYSICAL_DEVICE_PROPERTIES_2,
-            p_next: &mut rt_properties as *mut vk::PhysicalDeviceRayTracingPipelinePropertiesKHR as *mut std::ffi::c_void,
             ..Default::default()
         };
         unsafe { instance.get_physical_device_properties2(physical_device, &mut device_properties) };
@@ -137,8 +146,7 @@ impl VkPhysicalDevice {
         let indices = Self::find_queue_family(instance, physical_device, surface_loader, surface);
 
         let is_queue_family_supported = indices.is_complete();
-        let is_device_extension_supported =
-            Self::check_device_extension_support(instance, physical_device);
+        let is_device_extension_supported = Self::check_device_extension_support(instance, physical_device);
         let is_swapchain_supported = if is_device_extension_supported {
             let swapchain_support = VkSwapchain::query_swapchain_support(physical_device, surface_loader, surface);
             !swapchain_support.formats.is_empty() && !swapchain_support.present_modes.is_empty()
@@ -227,7 +235,7 @@ impl VkPhysicalDevice {
 
     fn max_sample_count(
         instance: &ash::Instance,
-        physical_device: vk::PhysicalDevice,
+        physical_device: vk::PhysicalDevice
     ) -> vk::SampleCountFlags {
         let physical_device_properties = unsafe {
             instance.get_physical_device_properties(physical_device)
@@ -264,6 +272,32 @@ impl VkPhysicalDevice {
         vk::SampleCountFlags::TYPE_1
     }
 
+    fn raytracing_properties(
+        instance: &ash::Instance,
+        physical_device: vk::PhysicalDevice
+    ) -> (vk::PhysicalDeviceRayTracingPipelinePropertiesKHR, vk::PhysicalDeviceAccelerationStructurePropertiesKHR) {
+        let mut rt_properties = vk::PhysicalDeviceRayTracingPipelinePropertiesKHR {
+            s_type: vk::StructureType::PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
+            ..Default::default()
+        };
+        let mut accel_properties = vk::PhysicalDeviceAccelerationStructurePropertiesKHR  {
+            p_next: &mut rt_properties as *mut vk::PhysicalDeviceRayTracingPipelinePropertiesKHR as *mut std::ffi::c_void,
+            ..Default::default()
+        };
+        let mut device_properties = vk::PhysicalDeviceProperties2 {
+            p_next: &mut accel_properties as *mut vk::PhysicalDeviceAccelerationStructurePropertiesKHR as *mut std::ffi::c_void,
+            s_type: vk::StructureType::PHYSICAL_DEVICE_PROPERTIES_2,
+            
+            ..Default::default()
+        };
+
+        unsafe {
+            instance.get_physical_device_properties2(physical_device, &mut device_properties);
+        }
+
+        (rt_properties, accel_properties)
+    }
+
     pub fn get_device(&self) -> vk::PhysicalDevice {
         self.device
     }
@@ -274,6 +308,14 @@ impl VkPhysicalDevice {
 
     pub fn get_max_sample_count(&self) -> vk::SampleCountFlags {
         self.max_sample_count
+    }
+
+    pub fn get_raytracing_properties(&self) -> &vk::PhysicalDeviceRayTracingPipelinePropertiesKHR {
+        &self.raytracing_pipeline_props
+    }
+
+    pub fn get_accel_properties(&self) -> &vk::PhysicalDeviceAccelerationStructurePropertiesKHR {
+        &self.accel_props
     }
 }
 
@@ -308,6 +350,23 @@ impl VkLogicalDevice {
             ..Default::default()
         };
 
+        let mut buffer_device_address_features = vk::PhysicalDeviceBufferDeviceAddressFeaturesEXT {
+            buffer_device_address: 1,
+            ..Default::default()
+        };
+
+        let mut acceleration_features = vk::PhysicalDeviceAccelerationStructureFeaturesKHR {
+            acceleration_structure: 1,
+            p_next: &mut buffer_device_address_features as *mut vk::PhysicalDeviceBufferDeviceAddressFeaturesEXT as *mut std::ffi::c_void,
+            ..Default::default()
+        };
+
+        let raytracing_features = vk::PhysicalDeviceRayTracingPipelineFeaturesKHR {
+            ray_tracing_pipeline: 1,
+            p_next: &mut acceleration_features as *mut vk::PhysicalDeviceAccelerationStructureFeaturesKHR as *mut std::ffi::c_void,
+            ..Default::default()
+        };
+
         let requred_validation_layer_raw_names: Vec<CString> = VALIDATION
             .required_validation_layers
             .iter()
@@ -320,7 +379,7 @@ impl VkLogicalDevice {
 
         let device_create_info = vk::DeviceCreateInfo {
             s_type: vk::StructureType::DEVICE_CREATE_INFO,
-            p_next: ptr::null(),
+            p_next: &raytracing_features as *const vk::PhysicalDeviceRayTracingPipelineFeaturesKHR as *const std::ffi::c_void,
             flags: vk::DeviceCreateFlags::empty(),
             queue_create_info_count: queue_create_infos.len() as u32,
             p_queue_create_infos: queue_create_infos.as_ptr(),
@@ -345,9 +404,16 @@ impl VkLogicalDevice {
                 .expect("Failed to create logical Device!")
         };
 
+        let raytracing_loader = ash::extensions::khr::RayTracingPipeline::new(instance.get_instance(), &device);
+        let accel_loader = ash::extensions::khr::AccelerationStructure::new(instance.get_instance(), &device);
+        let buffer_device_address_loader = ash::extensions::khr::BufferDeviceAddress::new(instance.get_instance(), &device);
+
         Arc::new(VkLogicalDevice {
             device: device,
-            queue_indices: indices
+            queue_indices: indices,
+            raytracing_loader: raytracing_loader,
+            accel_loader: accel_loader,
+            buffer_device_address_loader: buffer_device_address_loader
         })
     }
 
@@ -374,6 +440,18 @@ impl VkLogicalDevice {
     pub fn get_queue_family_indices(&self) -> &QueueFamilyIndices {
         &self.queue_indices
     }
+
+    pub fn raytracing_loader(&self) -> &ash::extensions::khr::RayTracingPipeline {
+        &self.raytracing_loader
+    }
+
+    pub fn accel_loader(&self) -> &ash::extensions::khr::AccelerationStructure {
+        &self.accel_loader
+    }
+
+    pub fn buffer_device_address_loader(&self) -> &ash::extensions::khr::BufferDeviceAddress {
+        &self.buffer_device_address_loader
+    }
 }
 
 impl Drop for VkLogicalDevice {
@@ -383,5 +461,3 @@ impl Drop for VkLogicalDevice {
         }
     }
 }
-
-unsafe impl Send for VkLogicalDevice {}

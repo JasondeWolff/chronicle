@@ -18,7 +18,8 @@ impl VkBuffer {
         allocator: ArcMutex<Allocator>,
         size: vk::DeviceSize,
         usage: vk::BufferUsageFlags,
-        required_memory_properties: vk::MemoryPropertyFlags
+        required_memory_properties: vk::MemoryPropertyFlags,
+        alignment: Option<vk::DeviceSize>
     ) -> Self {
         let buffer_create_info = vk::BufferCreateInfo {
             s_type: vk::StructureType::BUFFER_CREATE_INFO,
@@ -37,9 +38,12 @@ impl VkBuffer {
                 .expect("Failed to create Vertex Buffer")
         };
 
-        let mem_requirements = unsafe {
+        let mut mem_requirements = unsafe {
             device.get_device().get_buffer_memory_requirements(buffer)
         };
+        if let Some(alignment) = alignment {
+            mem_requirements.alignment = alignment;
+        }
 
         let location = if required_memory_properties.contains(vk::MemoryPropertyFlags::DEVICE_LOCAL) {
             MemoryLocation::GpuOnly
@@ -100,6 +104,19 @@ impl VkBuffer {
 
     pub fn get_size(&self) -> vk::DeviceSize {
         self.size
+    }
+
+    pub fn get_device_address(&self) -> vk::DeviceAddress {
+        let info = vk::BufferDeviceAddressInfo {
+            s_type: vk::StructureType::BUFFER_DEVICE_ADDRESS_INFO,
+            buffer: self.buffer,
+            ..Default::default()
+        };
+
+        unsafe {
+            self.device.buffer_device_address_loader()
+                .get_buffer_device_address(&info)
+        }
     }
 }
 

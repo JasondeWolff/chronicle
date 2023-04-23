@@ -4,6 +4,7 @@ use crate::graphics::*;
 pub struct VkVertexBuffer {
     vertex_buffer: Arc<VkBuffer>,
     vertex_count: u32,
+    vertex_stride: u32,
     dynamic: bool
 }
 
@@ -13,15 +14,17 @@ impl VkVertexBuffer {
         vertices: &Vec<T>,
         dynamic: bool
     ) -> Self {
-        let size = (std::mem::size_of::<T>() * vertices.len()) as u64;
+        let stride = std::mem::size_of::<T>();
+        let size = (stride * vertices.len()) as u64;
         
         let vertex_buffer = if dynamic {
             let vertex_buffer = VkBuffer::new(
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
-                vk::BufferUsageFlags::VERTEX_BUFFER,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
+                vk::BufferUsageFlags::VERTEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR,
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+                None
             );
     
             unsafe {
@@ -37,7 +40,8 @@ impl VkVertexBuffer {
                 app.get_allocator(),
                 size,
                 vk::BufferUsageFlags::TRANSFER_SRC,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+                None
             );
     
             unsafe {
@@ -50,8 +54,9 @@ impl VkVertexBuffer {
                 app.get_device().clone(),
                 app.get_allocator(),
                 size,
-                vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL
+                vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR,
+                vk::MemoryPropertyFlags::DEVICE_LOCAL,
+                None
             );
     
             let cmd_queue = app.get_cmd_queue();
@@ -71,20 +76,21 @@ impl VkVertexBuffer {
         VkVertexBuffer {
             vertex_buffer: Arc::new(vertex_buffer),
             vertex_count: vertices.len() as u32,
+            vertex_stride: stride as u32,
             dynamic: dynamic
         }
     }
 
-    pub fn track_buffer(&self) -> Arc<VkBuffer> {
+    pub fn get_buffer(&self) -> Arc<VkBuffer> {
         self.vertex_buffer.clone()
-    }
-
-    pub fn get_buffer(&self) -> vk::Buffer {
-        self.vertex_buffer.get_buffer()
     }
 
     pub fn vertex_count(&self) -> u32 {
         self.vertex_count
+    }
+
+    pub fn vertex_stride(&self) -> u32 {
+        self.vertex_stride
     }
 
     pub fn set_vertex_data<T: Sized>(&mut self, vertices: &Vec<T>) {

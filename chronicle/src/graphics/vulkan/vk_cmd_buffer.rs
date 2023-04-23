@@ -8,6 +8,8 @@ use crate::graphics::*;
 
 pub struct VkCmdBuffer {
     device: Arc<VkLogicalDevice>,
+    allocator: ArcMutex<Allocator>,
+
     cmd_pool: Arc<VkCmdPool>,
     cmd_buffer: vk::CommandBuffer,
 
@@ -24,6 +26,7 @@ pub struct VkCmdBuffer {
 impl VkCmdBuffer {
     pub fn new(
         device: Arc<VkLogicalDevice>,
+        allocator: ArcMutex<Allocator>,
         cmd_pool: Arc<VkCmdPool>,
         desc_pool: Arc<VkDescriptorPool>
     ) -> Self {
@@ -43,6 +46,7 @@ impl VkCmdBuffer {
 
         VkCmdBuffer {
             device: device.clone(),
+            allocator: allocator.clone(),
             cmd_pool: cmd_pool.clone(),
             cmd_buffer: command_buffers[0],
             desc_pool: desc_pool,
@@ -203,12 +207,12 @@ impl VkCmdBuffer {
                 .cmd_bind_vertex_buffers(
                     self.cmd_buffer,
                     0,
-                    &[vertex_buffer.get_buffer()],
+                    &[vertex_buffer.get_buffer().get_buffer()],
                     &[0_u64]
                 );
         }
 
-        self.tracked_buffers.push(vertex_buffer.track_buffer());
+        self.tracked_buffers.push(vertex_buffer.get_buffer());
     }
 
     pub fn bind_index_buffer(&mut self, index_buffer: &VkIndexBuffer) {
@@ -216,13 +220,13 @@ impl VkCmdBuffer {
             self.device.get_device()
                 .cmd_bind_index_buffer(
                     self.cmd_buffer,
-                    index_buffer.get_buffer(),
+                    index_buffer.get_buffer().get_buffer(),
                     0,
                     vk::IndexType::UINT32
                 );
         }
 
-        self.tracked_buffers.push(index_buffer.track_buffer());
+        self.tracked_buffers.push(index_buffer.get_buffer());
     }
 
     pub fn draw(&self, vertex_count: u32, instance_count: u32, first_vertex: u32, first_instance: u32) {
@@ -648,6 +652,115 @@ impl VkCmdBuffer {
                     0,
                     bytes
                 );
+        }
+    }
+
+    pub fn create_blas(&self,
+        build_infos: &mut Vec<VkAccelBuildInfo>,
+        indices: &Vec<usize>,
+        scratch_address: vk::DeviceAddress,
+        query_pool: Option<Arc<VkQueryPool>>
+    ) {
+        if let Some(query_pool) = &query_pool {
+            query_pool.reset();
+        }
+
+        for i in indices {
+            let build_info = &mut build_infos[*i];
+
+            let mut create_info = vk::AccelerationStructureCreateInfoKHR::builder()
+                .ty(vk::AccelerationStructureTypeKHR::BOTTOM_LEVEL)
+                .size(build_info.size_info.acceleration_structure_size)
+                .build();
+
+            build_info.accel = Some(Arc::new(VkAccel::new(
+                self.device.clone(),
+                self.allocator.clone(),
+                &mut create_info
+            )));
+            
+            { let mut build_info_mut = build_info.build_info.as_mut();
+                build_info_mut.dst_acceleration_structure = build_info.accel.as_ref().unwrap().get_accel();
+                build_info_mut.scratch_data.device_address = scratch_address;
+            }
+
+            unsafe {
+                self.device.accel_loader()
+                    .cmd_build_acceleration_structures(
+                        self.cmd_buffer,
+                        &[*build_info.build_info.as_ref()],
+                        &[build_info.get_range_info()]
+                    );
+            }
+
+            let barrier = vk::MemoryBarrier::builder()
+                .src_access_mask(vk::AccessFlags::ACCELERATION_STRUCTURE_WRITE_KHR)
+                .dst_access_mask(vk::AccessFlags::ACCELERATION_STRUCTURE_READ_KHR)
+                .build();
+
+            unsafe {
+                self.device.get_device()
+                    .cmd_pipeline_barrier(
+                        self.cmd_buffer,
+                        vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
+                        vk::PipelineStageFlags::ACCELERATION_STRUCTURE_BUILD_KHR,
+                        vk::DependencyFlags::empty(),
+                        &[barrier],
+                        &[],
+                        &[]
+                    );
+                
+                if let Some(query_pool) = &query_pool {
+                    self.device.accel_loader()
+                        .cmd_write_acceleration_structures_properties(
+                            self.cmd_buffer,
+                            &[build_info.build_info.as_ref().dst_acceleration_structure],
+                            vk::QueryType::ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR,
+                            query_pool.get_query_pool(),
+                            0
+                        );
+                }
+            }
+        }
+    }
+
+    pub fn compact_blas(&self,
+        build_infos: &mut Vec<VkAccelBuildInfo>,
+        indices: &Vec<usize>,
+        query_pool: Arc<VkQueryPool>
+    ) {
+        let mut query_count = 0;
+        let compact_sizes = query_pool.query_results::<vk::DeviceSize>(indices.len());
+        
+        for i in indices {
+            let build_info = &mut build_infos[*i];
+
+            build_info.cleanup = build_info.accel.clone();
+            build_info.size_info.acceleration_structure_size = compact_sizes[query_count];
+            query_count += 1;
+
+            let mut create_info = vk::AccelerationStructureCreateInfoKHR::builder()
+                .size(build_info.size_info.acceleration_structure_size)
+                .ty(vk::AccelerationStructureTypeKHR::BOTTOM_LEVEL)
+                .build();
+            build_info.accel = Some(Arc::new(VkAccel::new(
+                self.device.clone(),
+                self.allocator.clone(),
+                &mut create_info
+            )));
+
+            let copy_info = vk::CopyAccelerationStructureInfoKHR::builder()
+                .src(build_info.build_info.as_ref().dst_acceleration_structure)
+                .dst(build_info.accel.as_ref().unwrap().get_accel())
+                .mode(vk::CopyAccelerationStructureModeKHR::COMPACT)
+                .build();
+            unsafe {
+                self.device.accel_loader()
+                    .cmd_copy_acceleration_structure(
+                        self.cmd_buffer,
+                        &copy_info
+                    );
+            }
         }
     }
 }
