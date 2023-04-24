@@ -15,7 +15,7 @@ impl VkAccel {
         create_info: &mut vk::AccelerationStructureCreateInfoKHR
     ) -> Self {
         let buffer = Arc::new(VkBuffer::new(
-            "Accel buffer",
+            "Accel BUFFER".to_owned(),
             device.clone(),
             allocator,
             create_info.size,

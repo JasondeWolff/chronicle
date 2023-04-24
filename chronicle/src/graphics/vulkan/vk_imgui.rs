@@ -239,14 +239,20 @@ impl Renderer {
             }).collect();
             let idx_buffer: Vec<u32> = draw_list.idx_buffer().into_iter().map(|x| -> u32 { *x as u32 }).collect();
 
-            vertex_buffers.push(VkVertexBuffer::new(
+            vertex_buffers.push(VkDataBuffer::new(
+                "ImGui Vertices",
                 app,
                 &vtx_buffer,
+                vk::BufferUsageFlags::VERTEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+                vk::MemoryPropertyFlags::DEVICE_LOCAL,
                 false
             ));
-            index_buffers.push(VkIndexBuffer::new(
+            index_buffers.push(VkDataBuffer::new(
+                "ImGui Indices",
                 app,
                 &idx_buffer,
+                vk::BufferUsageFlags::INDEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
+                vk::MemoryPropertyFlags::DEVICE_LOCAL,
                 false
             ));
         }
@@ -268,7 +274,7 @@ impl Renderer {
 
                 cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
                 cmd_buffer.set_desc_layout(0, self.desc_layout.clone());
-                cmd_buffer.set_desc_sampler(0, 0, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, &self.sampler, &mut self.texture);
+                cmd_buffer.set_desc_texture(0, 0, &self.sampler, &mut self.texture, vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL);
                 cmd_buffer.bind_desc_sets();
         
                 cmd_buffer.push_constant(

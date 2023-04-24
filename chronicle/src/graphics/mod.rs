@@ -51,6 +51,7 @@ pub struct Renderer {
 
     descriptor_layout: Arc<VkDescriptorSetLayout>,
 
+    rt_desc_layout: Arc<VkDescriptorSetLayout>,
     tlas: ArcMutex<VkTlas>,
 
     models: HashMap<Resource<Model>, Vec<VkMesh>>,
@@ -72,6 +73,7 @@ impl Renderer {
         let render_pass;
         let present_render_pass;
         let descriptor_layout;
+        let rt_desc_layout;
         let pipeline;
         {
             let mut swapchain = swapchain.as_mut();
@@ -149,6 +151,44 @@ impl Renderer {
                 vk::CullModeFlags::BACK,
                 vk::TRUE
             );
+
+            rt_desc_layout = VkDescriptorSetLayout::new(device.clone(), &vec![
+                vk::DescriptorSetLayoutBinding {
+                    binding: 0,
+                    descriptor_type: vk::DescriptorType::ACCELERATION_STRUCTURE_KHR,
+                    descriptor_count: 1,
+                    stage_flags: vk::ShaderStageFlags::RAYGEN_KHR,
+                    p_immutable_samplers: std::ptr::null(),
+                },
+                vk::DescriptorSetLayoutBinding {
+                    binding: 1,
+                    descriptor_type: vk::DescriptorType::STORAGE_IMAGE,
+                    descriptor_count: 1,
+                    stage_flags: vk::ShaderStageFlags::RAYGEN_KHR,
+                    p_immutable_samplers: std::ptr::null(),
+                },
+                vk::DescriptorSetLayoutBinding {
+                    binding: 2,
+                    descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+                    descriptor_count: 1,
+                    stage_flags: vk::ShaderStageFlags::RAYGEN_KHR,
+                    p_immutable_samplers: std::ptr::null(),
+                },
+                vk::DescriptorSetLayoutBinding {
+                    binding: 3,
+                    descriptor_type: vk::DescriptorType::STORAGE_IMAGE,
+                    descriptor_count: 1,
+                    stage_flags: vk::ShaderStageFlags::CLOSEST_HIT_KHR,
+                    p_immutable_samplers: std::ptr::null(),
+                },
+                vk::DescriptorSetLayoutBinding {
+                    binding: 4,
+                    descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+                    descriptor_count: 1, // MAX TEXTURE COUNT
+                    stage_flags: vk::ShaderStageFlags::CLOSEST_HIT_KHR,
+                    p_immutable_samplers: std::ptr::null(),
+                }
+            ]);
         }
 
         let tlas = VkTlas::new();
@@ -168,6 +208,7 @@ impl Renderer {
             pipeline: pipeline,
             descriptor_layout: descriptor_layout,
 
+            rt_desc_layout: rt_desc_layout,
             tlas: tlas,
 
             models: HashMap::new(),
@@ -295,35 +336,43 @@ impl Renderer {
                     cmd_buffer.set_viewport(swapchain.get_extent());
                     cmd_buffer.begin_render_pass(&self.render_pass, &swapchain);
 
-                    cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
+                    if true {
+                        cmd_buffer.bind_graphics_pipeline(self.pipeline.clone());
 
-                    for dynamic_model in self.dynamic_models.iter() {
-                        let mut model_properties = dynamic_model.properties.as_mut();
-                        let model_matrix = model_properties.transform.get_matrix(false);
-                        cmd_buffer.push_constant(
-                            &MVP {
-                                mvp: proj_matrix * view_matrix * model_matrix
-                            },
-                            vk::ShaderStageFlags::VERTEX
-                        );
+                        for dynamic_model in self.dynamic_models.iter() {
+                            let mut model_properties = dynamic_model.properties.as_mut();
+                            let model_matrix = model_properties.transform.get_matrix(false);
+                            cmd_buffer.push_constant(
+                                &MVP {
+                                    mvp: proj_matrix * view_matrix * model_matrix
+                                },
+                                vk::ShaderStageFlags::VERTEX
+                            );
 
-                        let vk_meshes = self.models.get(&dynamic_model.model_resource).unwrap();
-                        for (i, mesh) in dynamic_model.model_resource.as_ref().meshes.iter().enumerate() {
-                            let material = dynamic_model.model_resource.as_ref().materials[mesh.material_idx].clone();
-                            let material = material.as_ref();
+                            let vk_meshes = self.models.get(&dynamic_model.model_resource).unwrap();
+                            for (i, mesh) in dynamic_model.model_resource.as_ref().meshes.iter().enumerate() {
+                                let material = dynamic_model.model_resource.as_ref().materials[mesh.material_idx].clone();
+                                let material = material.as_ref();
 
-                            cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
+                                cmd_buffer.set_desc_layout(0, self.descriptor_layout.clone());
 
-                            let base_color_texture = self.textures.get_mut(&material.base_color_texture);
-                            if let Some(texture) = base_color_texture {
-                                let sampler = self.samplers.get(&texture.mip_levels()).unwrap();
-                                cmd_buffer.set_desc_sampler(0, 1, vk::DescriptorType::COMBINED_IMAGE_SAMPLER, sampler, texture);
+                                let base_color_texture = self.textures.get_mut(&material.base_color_texture);
+                                if let Some(texture) = base_color_texture {
+                                    let sampler = self.samplers.get(&texture.mip_levels()).unwrap();
+                                    cmd_buffer.set_desc_texture(0, 1,
+                                        sampler,
+                                        texture,
+                                        vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
+                                    );
+                                }
+
+                                cmd_buffer.bind_desc_sets();
+
+                                vk_meshes[i].draw_cmds(&mut cmd_buffer);
                             }
-
-                            cmd_buffer.bind_desc_sets();
-
-                            vk_meshes[i].draw_cmds(&mut cmd_buffer);
                         }
+                    } else {
+
                     }
 
                     cmd_buffer.end_render_pass();

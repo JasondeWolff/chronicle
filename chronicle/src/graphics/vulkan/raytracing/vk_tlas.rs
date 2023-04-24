@@ -15,6 +15,10 @@ impl VkTlas {
         tlas
     }
 
+    pub fn get_accel(&self) -> vk::AccelerationStructureKHR {
+        self.accel.as_ref().unwrap().as_ref().get_accel()
+    }
+
     pub fn rebuild(&mut self,
         app: &mut VkApp,
         instances: &Vec<VkBlasInstance>,
@@ -24,7 +28,7 @@ impl VkTlas {
         let instances_size = std::mem::size_of::<VkBlasInstance>() * instances.len();
 
         let staging_buffer = VkBuffer::new(
-            "Tlas staging buffer",
+            "Tlas STAGING BUFFER".to_owned(),
             app.get_device().clone(),
             app.get_allocator(),
             instances_size as u64,
@@ -40,7 +44,7 @@ impl VkTlas {
         }
 
         let instances_buffer = VkBuffer::new(
-            "Tlas instances buffer",
+            "Tlas instances BUFFER".to_owned(),
             app.get_device(),
             app.get_allocator(),
             instances_size as u64,

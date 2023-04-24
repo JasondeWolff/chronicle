@@ -23,7 +23,7 @@ impl VkTexture {
         let mip_levels = texture_resource.as_ref().mip_levels;
 
         let staging_buffer = VkBuffer::new(
-            "Texture staging buffer",
+            "Texture STAGING BUFFER".to_owned(),
             app.get_device().clone(),
             app.get_allocator(),
             image_size,

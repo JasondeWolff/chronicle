@@ -1,12 +1,10 @@
 pub mod vk_buffer;
 pub use vk_buffer::*;
-pub mod vk_vertex_buffer;
-pub use vk_vertex_buffer::*;
-pub mod vk_index_buffer;
-pub use vk_index_buffer::*;
 pub mod vk_uniform_buffer;
 pub use vk_uniform_buffer::*;
 pub mod vk_image;
 pub use vk_image::*;
 pub mod vk_texture;
 pub use vk_texture::*;
+pub mod vk_data_buffer;
+pub use vk_data_buffer::*;

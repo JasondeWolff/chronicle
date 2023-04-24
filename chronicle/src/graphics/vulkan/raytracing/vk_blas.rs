@@ -1,4 +1,5 @@
 use ash::vk;
+use model::Vertex;
 
 use crate::graphics::*;
 
@@ -26,14 +27,14 @@ impl VkAccelBuildInfo {
 
 impl VkBlas {
     pub fn new(
-        vertex_buffer: &VkVertexBuffer,
-        index_buffer: &VkIndexBuffer,
+        vertex_buffer: &VkDataBuffer<Vertex>,
+        index_buffer: &VkDataBuffer<u32>,
         build_flags: vk::BuildAccelerationStructureFlagsKHR
     ) -> ArcMutex<Self> {
         let vertex_buffer_address = vertex_buffer.get_buffer().get_device_address();
         let index_buffer_address = index_buffer.get_buffer().get_device_address();
 
-        let primitive_count = index_buffer.index_count() / 3;
+        let primitive_count = index_buffer.get_count() / 3;
 
         let geometries = vec![vk::AccelerationStructureGeometryKHR::builder()
             .geometry_type(vk::GeometryTypeKHR::TRIANGLES)
@@ -44,12 +45,12 @@ impl VkBlas {
                     .vertex_data(vk::DeviceOrHostAddressConstKHR {
                         device_address: vertex_buffer_address
                     })
-                    .vertex_stride(vertex_buffer.vertex_stride() as u64)
+                    .vertex_stride(vertex_buffer.get_stride() as u64)
                     .index_type(vk::IndexType::UINT32)
                     .index_data(vk::DeviceOrHostAddressConstKHR {
                         device_address: index_buffer_address
                     })
-                    .max_vertex(vertex_buffer.vertex_count())
+                    .max_vertex(vertex_buffer.get_count())
                     .build()
         }).build()];
 
@@ -126,7 +127,7 @@ impl VkBlas {
 
         // Create a temp staging buffer
         let scratch_buffer = VkBuffer::new(
-            "Blas scratch buffer",
+            "Blas SCRATCH BUFFER".to_owned(),
             device.clone(),
             app.get_allocator(),
             max_scratch_size,

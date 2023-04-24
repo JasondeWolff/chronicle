@@ -16,7 +16,7 @@ pub struct VkBuffer {
 
 impl VkBuffer {
     pub fn new(
-        name: &'static str,
+        name: String,
         device: Arc<VkLogicalDevice>,
         allocator: ArcMutex<Allocator>,
         size: vk::DeviceSize,
@@ -75,7 +75,7 @@ impl VkBuffer {
             buffer: buffer,
             allocation: Some(allocation),
             size: size,
-            name: String::from(name)
+            name: name.clone()
         };
 
         buffer.set_debug_name(name);
@@ -126,7 +126,10 @@ impl VkBuffer {
         }
     }
 
-    pub fn set_debug_name(&mut self, name: &'static str) {
+    pub fn set_debug_name(&mut self, name: String) {
+        self.name = name.clone();
+        let name = std::ffi::CString::new(name).unwrap();
+
         let handle: u64 = unsafe {
             std::mem::transmute(self.buffer)
         };
@@ -134,7 +137,7 @@ impl VkBuffer {
         let info = vk::DebugUtilsObjectNameInfoEXT::builder()
             .object_type(vk::ObjectType::BUFFER)
             .object_handle(handle)
-            .object_name(&std::ffi::CString::new(name).unwrap())
+            .object_name(name.as_c_str())
             .build();
 
         unsafe {
@@ -145,8 +148,6 @@ impl VkBuffer {
                 )
                 .expect("Failed to set debug name.");
         }
-
-        self.name = String::from(name);
     }
 }
 

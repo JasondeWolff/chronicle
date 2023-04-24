@@ -201,7 +201,7 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn bind_vertex_buffer(&mut self, vertex_buffer: &VkVertexBuffer) {
+    pub fn bind_vertex_buffer<T>(&mut self, vertex_buffer: &VkDataBuffer<T>) {
         unsafe {
             self.device.get_device()
                 .cmd_bind_vertex_buffers(
@@ -215,7 +215,7 @@ impl VkCmdBuffer {
         self.tracked_buffers.push(vertex_buffer.get_buffer());
     }
 
-    pub fn bind_index_buffer(&mut self, index_buffer: &VkIndexBuffer) {
+    pub fn bind_index_buffer(&mut self, index_buffer: &VkDataBuffer<u32>) {
         unsafe {
             self.device.get_device()
                 .cmd_bind_index_buffer(
@@ -571,19 +571,19 @@ impl VkCmdBuffer {
         self.tracked_buffers.push(uniform_buffer.as_ref().track_buffer());
     }
 
-    pub fn set_desc_sampler(&mut self,
+    pub fn set_desc_texture(&mut self,
         set: u32,
         binding: u32,
-        desc_type: vk::DescriptorType,
         sampler: &VkSampler,
-        texture: &mut VkTexture
+        texture: &mut VkTexture,
+        image_layout: vk::ImageLayout
     ) {
         let desc_set = self.get_desc_set(set);
 
         let descriptor_image_infos = [vk::DescriptorImageInfo {
             sampler: sampler.get_sampler(),
             image_view: texture.get_image_view(),
-            image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            image_layout: image_layout,
         }];
 
         let descriptor_write_sets = [
@@ -594,8 +594,77 @@ impl VkCmdBuffer {
                 dst_binding: binding,
                 dst_array_element: 0,
                 descriptor_count: 1,
-                descriptor_type: desc_type,
+                descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
                 p_image_info: descriptor_image_infos.as_ptr(),
+                p_buffer_info: std::ptr::null(),
+                p_texel_buffer_view: std::ptr::null(),
+            }
+        ];
+
+        unsafe {
+            self.device.get_device()
+                .update_descriptor_sets(&descriptor_write_sets, &[]);
+        }
+    }
+
+    pub fn set_desc_img(&mut self,
+        set: u32,
+        binding: u32,
+        texture: &mut VkImage,
+        image_layout: vk::ImageLayout
+    ) {
+        let desc_set = self.get_desc_set(set);
+
+        let descriptor_image_infos = [vk::DescriptorImageInfo {
+            sampler: vk::Sampler::default(),
+            image_view: texture.get_image_view(),
+            image_layout: image_layout,
+        }];
+
+        let descriptor_write_sets = [
+            vk::WriteDescriptorSet {
+                s_type: vk::StructureType::WRITE_DESCRIPTOR_SET,
+                p_next: std::ptr::null(),
+                dst_set: desc_set.get_desc_set(),
+                dst_binding: binding,
+                dst_array_element: 0,
+                descriptor_count: 1,
+                descriptor_type: vk::DescriptorType::STORAGE_IMAGE,
+                p_image_info: descriptor_image_infos.as_ptr(),
+                p_buffer_info: std::ptr::null(),
+                p_texel_buffer_view: std::ptr::null(),
+            }
+        ];
+
+        unsafe {
+            self.device.get_device()
+                .update_descriptor_sets(&descriptor_write_sets, &[]);
+        }
+    }
+
+    pub fn set_desc_tlas(&mut self,
+        set: u32,
+        binding: u32,
+        tlas: &VkTlas
+    ) {
+        let desc_set = self.get_desc_set(set);
+
+        let accel_info = vk::WriteDescriptorSetAccelerationStructureKHR {
+            acceleration_structure_count: 1,
+            p_acceleration_structures: &tlas.get_accel(),
+            ..Default::default()
+        };
+
+        let descriptor_write_sets = [
+            vk::WriteDescriptorSet {
+                s_type: vk::StructureType::WRITE_DESCRIPTOR_SET,
+                p_next: &accel_info as *const vk::WriteDescriptorSetAccelerationStructureKHR as *const std::ffi::c_void,
+                dst_set: desc_set.get_desc_set(),
+                dst_binding: binding,
+                dst_array_element: 0,
+                descriptor_count: 1,
+                descriptor_type: vk::DescriptorType::ACCELERATION_STRUCTURE_KHR,
+                p_image_info: std::ptr::null(),
                 p_buffer_info: std::ptr::null(),
                 p_texel_buffer_view: std::ptr::null(),
             }
@@ -842,7 +911,7 @@ impl VkCmdBuffer {
         };
 
         let scratch_buffer = Arc::new(VkBuffer::new(
-            "Tlas scratch buffer",
+            "Tlas SCRATCH BUFFER".to_owned(),
             self.device.clone(),
             self.allocator.clone(),
             size_info.build_scratch_size,
