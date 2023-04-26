@@ -13,11 +13,15 @@ impl VkMesh {
         vertices: &Vec<Vertex>,
         indices: &Vec<u32>
     ) -> Self {
+        let usage_flags = vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS
+                                            | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR
+                                            | vk::BufferUsageFlags::STORAGE_BUFFER;
+
         let vertex_buffer = VkDataBuffer::new(
             "Mesh Vertices",
             app,
             &vertices,
-            vk::BufferUsageFlags::VERTEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR | vk::BufferUsageFlags::STORAGE_BUFFER,
+            vk::BufferUsageFlags::VERTEX_BUFFER | usage_flags,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
             false
         );
@@ -25,7 +29,7 @@ impl VkMesh {
             "Mesh Indices",
             app,
             &indices,
-            vk::BufferUsageFlags::INDEX_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR | vk::BufferUsageFlags::STORAGE_BUFFER,
+            vk::BufferUsageFlags::INDEX_BUFFER | usage_flags,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
             false
         );

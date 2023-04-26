@@ -16,24 +16,30 @@ use vulkan::*;
 
 use std::collections::HashMap;
 use ash::vk;
-use cgmath::Matrix4;
+use cgmath::{Matrix4, SquareMatrix};
 
 use crate::Window;
 use crate::resources::{Model, Resource, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
 
-// #[repr(C)]
-// struct UBO {
-//     model: Matrix4<f32>,
-//     view: Matrix4<f32>,
-//     proj: Matrix4<f32>
-// }
+#[repr(C)]
+struct RtGlobalUBO {
+    mvp: Matrix4<f32>
+}
 
-// impl ToAny for UBO {
-//     fn as_any(&mut self) -> &mut dyn std::any::Any {
-//         self
-//     }
-// }
+impl Default for RtGlobalUBO {
+    fn default() -> Self {
+        RtGlobalUBO {
+            mvp: SquareMatrix::identity()
+        }
+    }
+}
+
+impl ToAny for RtGlobalUBO {
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
 
 #[repr(C)]
 struct MVP {
@@ -52,6 +58,7 @@ pub struct Renderer {
     descriptor_layout: Arc<VkDescriptorSetLayout>,
 
     rt_desc_layout: Arc<VkDescriptorSetLayout>,
+    rt_globals: Arc<VkDataBuffer<RtGlobalUBO>>,
     tlas: ArcMutex<VkTlas>,
 
     models: HashMap<Resource<Model>, Vec<VkMesh>>,
@@ -176,7 +183,7 @@ impl Renderer {
                 },
                 vk::DescriptorSetLayoutBinding {
                     binding: 3,
-                    descriptor_type: vk::DescriptorType::STORAGE_IMAGE,
+                    descriptor_type: vk::DescriptorType::STORAGE_BUFFER,
                     descriptor_count: 1,
                     stage_flags: vk::ShaderStageFlags::CLOSEST_HIT_KHR,
                     p_immutable_samplers: std::ptr::null(),
@@ -191,9 +198,18 @@ impl Renderer {
             ]);
         }
 
+        let app = ArcMutex::new(app);
+
+        let rt_globals = Arc::new(VkDataBuffer::new(
+            "RT Globals",
+            &mut app.clone().as_mut(),
+            &vec![RtGlobalUBO::default()],
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+            true
+        ));
         let tlas = VkTlas::new();
 
-        let app = ArcMutex::new(app);
         let imgui = VkImGui::new(
             app.clone(),
             &render_pass
@@ -209,6 +225,7 @@ impl Renderer {
             descriptor_layout: descriptor_layout,
 
             rt_desc_layout: rt_desc_layout,
+            rt_globals: rt_globals,
             tlas: tlas,
 
             models: HashMap::new(),

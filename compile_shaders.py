@@ -5,7 +5,10 @@ shaders = [
     "shader.vert",
     "shader.frag",
     "imgui.vert",
-    "imgui.frag"
+    "imgui.frag",
+    "raytracing/raytrace.rgen",
+    "raytracing/raytrace.rchit",
+    "raytracing/raytrace.rmiss"
 ]
 
 cwd = ""
@@ -13,5 +16,5 @@ if len(sys.argv) > 1:
     cwd = sys.argv[1] + "/"
 
 for shader in shaders:
-    cmd_str = "glslc " + cwd + "src/" + shader + " -o " + cwd + "bin/" + shader + ".spv"
+    cmd_str = "glslc --target-env=vulkan1.2 " + cwd + "src/" + shader + " -o " + cwd + "bin/" + shader + ".spv"
     subprocess.run(cmd_str, shell = True)
