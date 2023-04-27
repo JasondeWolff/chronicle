@@ -41,7 +41,7 @@ pub const ENABLE_EXTENSION_NAMES: [*const std::ffi::c_char; 9] = [
     ash::extensions::khr::RayTracingPipeline::name().as_ptr(),
     ash::extensions::khr::DeferredHostOperations::name().as_ptr(),
     ash::vk::KhrSpirv14Fn::name().as_ptr(),
-    ash::vk::KhrShaderFloatControlsFn::name().as_ptr()
+    ash::vk::KhrShaderFloatControlsFn::name().as_ptr(),
 ];
 
 pub const MAX_FRAMES_IN_FLIGHT: usize = 3;

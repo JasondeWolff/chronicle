@@ -2,13 +2,13 @@ use std::ptr;
 
 use crate::graphics::*;
 
-pub struct VkPipeline {
+pub struct VkGraphicsPipeline {
     device: Arc<VkLogicalDevice>,
     pipeline_layout: vk::PipelineLayout,
     pipeline: vk::Pipeline
 }
 
-impl VkPipeline {
+impl VkGraphicsPipeline {
     pub fn new<T: VkVertexDescs>(
         device: Arc<VkLogicalDevice>,
         extent: &vk::Extent2D,
@@ -81,7 +81,7 @@ impl VkPipeline {
             p_viewports: viewports.as_ptr(),
         };
 
-        let rasterization_statue_create_info = vk::PipelineRasterizationStateCreateInfo {
+        let rasterization_state_create_info = vk::PipelineRasterizationStateCreateInfo {
             s_type: vk::StructureType::PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: vk::PipelineRasterizationStateCreateFlags::empty(),
@@ -206,7 +206,7 @@ impl VkPipeline {
             p_input_assembly_state: &vertex_input_assembly_state_info,
             p_tessellation_state: ptr::null(),
             p_viewport_state: &viewport_state_create_info,
-            p_rasterization_state: &rasterization_statue_create_info,
+            p_rasterization_state: &rasterization_state_create_info,
             p_multisample_state: &multisample_state_create_info,
             p_depth_stencil_state: &depth_state_create_info,
             p_color_blend_state: &color_blend_state,
@@ -228,7 +228,7 @@ impl VkPipeline {
                 .expect("Failed to create Graphics Pipeline.")
         };
 
-        Arc::new(VkPipeline {
+        Arc::new(VkGraphicsPipeline {
             device: device,
             pipeline_layout: pipeline_layout,
             pipeline: pipeline[0]
@@ -244,7 +244,7 @@ impl VkPipeline {
     }
 }
 
-impl Drop for VkPipeline {
+impl Drop for VkGraphicsPipeline {
     fn drop(&mut self) {
         unsafe {
             self.device.get_device()

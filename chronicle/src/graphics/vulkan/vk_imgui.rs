@@ -115,7 +115,7 @@ impl VkVertexDescs for ImGuiVert {
 
 struct Renderer {
     device: Arc<VkLogicalDevice>,
-    pipeline: Arc<VkPipeline>,
+    pipeline: Arc<VkGraphicsPipeline>,
     desc_layout: Arc<VkDescriptorSetLayout>,
     texture: VkTexture,
     sampler: VkSampler
@@ -155,7 +155,7 @@ impl Renderer {
     fn create_pipeline(
         app: ArcMutex<VkApp>,
         render_pass: &VkRenderPass
-    ) -> (Arc<VkPipeline>, Arc<VkDescriptorSetLayout>) {
+    ) -> (Arc<VkGraphicsPipeline>, Arc<VkDescriptorSetLayout>) {
         let app = app.as_mut();
         let device = app.get_device();
         let swapchain_extent = *app.get_swapchain().unwrap().as_ref().get_extent();
@@ -178,7 +178,7 @@ impl Renderer {
             }
         ];
 
-        let pipeline = VkPipeline::new::<ImGuiVert>(
+        let pipeline = VkGraphicsPipeline::new::<ImGuiVert>(
             device.clone(),
             &swapchain_extent,
             &render_pass,

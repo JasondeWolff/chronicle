@@ -17,7 +17,7 @@ pub struct VkCmdBuffer {
     desc_sets: HashMap<u32, Arc<VkDescriptorSet>>,
     desc_layouts: HashMap<u32, Arc<VkDescriptorSetLayout>>,
 
-    pipeline: Option<Arc<VkPipeline>>,
+    pipeline: Option<Arc<VkGraphicsPipeline>>,
 
     tracked_buffers: Vec<Arc<VkBuffer>>,
     tracked_desc_sets: Vec<Arc<VkDescriptorSet>>,
@@ -188,7 +188,7 @@ impl VkCmdBuffer {
         }
     }
 
-    pub fn bind_graphics_pipeline(&mut self, pipeline: Arc<VkPipeline>) {
+    pub fn bind_graphics_pipeline(&mut self, pipeline: Arc<VkGraphicsPipeline>) {
         self.pipeline = Some(pipeline.clone());
 
         unsafe {

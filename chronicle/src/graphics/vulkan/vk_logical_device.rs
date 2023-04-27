@@ -55,28 +55,36 @@ impl VkLogicalDevice {
 
         let physical_device_features = vk::PhysicalDeviceFeatures {
             sampler_anisotropy: vk::TRUE,
+            shader_int64: vk::TRUE,
+            ..Default::default()
+        };
+
+        let mut descriptor_indexing_features = vk::PhysicalDeviceDescriptorIndexingFeatures {
+            runtime_descriptor_array: vk::TRUE,
+            shader_sampled_image_array_non_uniform_indexing: vk::TRUE,
             ..Default::default()
         };
 
         let mut host_query_reset_features = vk::PhysicalDeviceHostQueryResetFeatures  {
-            host_query_reset: 1,
+            host_query_reset: vk::TRUE,
+            p_next: &mut descriptor_indexing_features as *mut vk::PhysicalDeviceDescriptorIndexingFeatures as *mut std::ffi::c_void,
             ..Default::default()
         };
 
         let mut buffer_device_address_features = vk::PhysicalDeviceBufferDeviceAddressFeaturesEXT {
-            buffer_device_address: 1,
+            buffer_device_address: vk::TRUE,
             p_next: &mut host_query_reset_features as *mut vk::PhysicalDeviceHostQueryResetFeatures as *mut std::ffi::c_void,
             ..Default::default()
         };
 
         let mut acceleration_features = vk::PhysicalDeviceAccelerationStructureFeaturesKHR {
-            acceleration_structure: 1,
+            acceleration_structure: vk::TRUE,
             p_next: &mut buffer_device_address_features as *mut vk::PhysicalDeviceBufferDeviceAddressFeaturesEXT as *mut std::ffi::c_void,
             ..Default::default()
         };
 
         let raytracing_features = vk::PhysicalDeviceRayTracingPipelineFeaturesKHR {
-            ray_tracing_pipeline: 1,
+            ray_tracing_pipeline: vk::TRUE,
             p_next: &mut acceleration_features as *mut vk::PhysicalDeviceAccelerationStructureFeaturesKHR as *mut std::ffi::c_void,
             ..Default::default()
         };

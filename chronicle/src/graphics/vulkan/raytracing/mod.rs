@@ -6,3 +6,5 @@ pub mod vk_tlas;
 pub use vk_tlas::*;
 pub mod vk_accel;
 pub use vk_accel::*;
+pub mod vk_rt_pipeline;
+pub use vk_rt_pipeline::*;

@@ -33,6 +33,9 @@ impl VkShaderModule {
             "tese" | "tessellation_evaluation" | "tes" => vk::ShaderStageFlags::TESSELLATION_EVALUATION,
             "geom" | "geometry" | "gs" => vk::ShaderStageFlags::GEOMETRY,
             "comp" | "compute" | "cs" => vk::ShaderStageFlags::COMPUTE,
+            "rgen" => vk::ShaderStageFlags::RAYGEN_KHR,
+            "rmiss" => vk::ShaderStageFlags::MISS_KHR,
+            "rchit" => vk::ShaderStageFlags::CLOSEST_HIT_KHR,
             extension => panic!("Failed to get shader type from file extension, unable to recognize \"{extension}\".")
         };
 

@@ -16,11 +16,44 @@ use vulkan::*;
 
 use std::collections::HashMap;
 use ash::vk;
-use cgmath::{Matrix4, SquareMatrix};
+use cgmath::{Matrix4, SquareMatrix, Vector4, Vector3, Zero};
 
 use crate::Window;
 use crate::resources::{Model, Resource, Texture, model};
 use crate::common::{RcCell, vec_remove_multiple};
+
+#[repr(C)]
+struct MaterialProperties {
+    pub base_color_factor: Vector4<f32>,
+    pub base_color_texture: i32,
+    pub normal_scale: f32,
+    pub normal_texture: i32,
+    pub metallic_factor: f32,
+    pub roughness_factor: f32,
+    pub metallic_roughness_texture: i32,
+    pub occlusion_strength: f32,
+    pub occlusion_texture: i32,
+    pub emissive_factor: Vector3<f32>,
+    pub emissive_texture: i32,
+}
+
+impl Default for MaterialProperties {
+    fn default() -> Self {
+        MaterialProperties {
+            base_color_factor: Vector4::zero(),
+            base_color_texture: -1,
+            normal_scale: 0.0,
+            normal_texture: -1,
+            metallic_factor: 0.0,
+            roughness_factor: 0.0,
+            metallic_roughness_texture: -1,
+            occlusion_strength: 0.0,
+            occlusion_texture: -1,
+            emissive_factor: Vector3::zero(),
+            emissive_texture: -1
+        }
+    }
+}
 
 #[repr(C)]
 struct RtGlobalUBO {
@@ -53,11 +86,12 @@ pub struct Renderer {
     render_img: ArcMutex<VkImage>,
     render_pass: Arc<VkRenderPass>,
     present_render_pass: Arc<VkRenderPass>,
-    pipeline: Arc<VkPipeline>,
+    pipeline: Arc<VkGraphicsPipeline>,
 
     descriptor_layout: Arc<VkDescriptorSetLayout>,
 
     rt_desc_layout: Arc<VkDescriptorSetLayout>,
+    rt_pipeline: Arc<VkRTPipeline>,
     rt_globals: Arc<VkDataBuffer<RtGlobalUBO>>,
     tlas: ArcMutex<VkTlas>,
 
@@ -124,15 +158,8 @@ impl Renderer {
             );
 
             descriptor_layout = VkDescriptorSetLayout::new(device.clone(), &vec![
-                // vk::DescriptorSetLayoutBinding {
-                //     binding: 0,
-                //     descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
-                //     descriptor_count: 1,
-                //     stage_flags: vk::ShaderStageFlags::VERTEX,
-                //     p_immutable_samplers: std::ptr::null(),
-                // },
                 vk::DescriptorSetLayoutBinding {
-                    binding: 1,
+                    binding: 0,
                     descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
                     descriptor_count: 1,
                     stage_flags: vk::ShaderStageFlags::FRAGMENT,
@@ -148,7 +175,7 @@ impl Renderer {
                 }
             ];
 
-            pipeline = VkPipeline::new::<VkVertex>(
+            pipeline = VkGraphicsPipeline::new::<VkVertex>(
                 device.clone(),
                 swapchain.get_extent(),
                 &render_pass,
@@ -164,7 +191,7 @@ impl Renderer {
                     binding: 0,
                     descriptor_type: vk::DescriptorType::ACCELERATION_STRUCTURE_KHR,
                     descriptor_count: 1,
-                    stage_flags: vk::ShaderStageFlags::RAYGEN_KHR,
+                    stage_flags: vk::ShaderStageFlags::RAYGEN_KHR | vk::ShaderStageFlags::CLOSEST_HIT_KHR,
                     p_immutable_samplers: std::ptr::null(),
                 },
                 vk::DescriptorSetLayoutBinding {
@@ -200,6 +227,18 @@ impl Renderer {
 
         let app = ArcMutex::new(app);
 
+        let rt_pipeline = VkRTPipeline::new(
+            app.as_ref().get_device(),
+            &vec![&rt_desc_layout],
+            &vec![],
+            &vec![
+                String::from("raytracing/raytrace.rgen"),
+                String::from("raytracing/raytrace.rmiss"),
+                String::from("raytracing/raytrace.rchit")
+            ],
+            1
+        );
+
         let rt_globals = Arc::new(VkDataBuffer::new(
             "RT Globals",
             &mut app.clone().as_mut(),
@@ -225,6 +264,7 @@ impl Renderer {
             descriptor_layout: descriptor_layout,
 
             rt_desc_layout: rt_desc_layout,
+            rt_pipeline: rt_pipeline,
             rt_globals: rt_globals,
             tlas: tlas,
 
@@ -376,7 +416,7 @@ impl Renderer {
                                 let base_color_texture = self.textures.get_mut(&material.base_color_texture);
                                 if let Some(texture) = base_color_texture {
                                     let sampler = self.samplers.get(&texture.mip_levels()).unwrap();
-                                    cmd_buffer.set_desc_texture(0, 1,
+                                    cmd_buffer.set_desc_texture(0, 0,
                                         sampler,
                                         texture,
                                         vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
