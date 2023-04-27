@@ -227,17 +227,23 @@ impl Renderer {
 
         let app = ArcMutex::new(app);
 
-        let rt_pipeline = VkRTPipeline::new(
-            app.as_ref().get_device(),
-            &vec![&rt_desc_layout],
-            &vec![],
-            &vec![
-                String::from("raytracing/raytrace.rgen"),
-                String::from("raytracing/raytrace.rmiss"),
-                String::from("raytracing/raytrace.rchit")
-            ],
-            1
-        );
+        let rt_pipeline;
+        {
+            let app_ref = app.as_ref();
+            rt_pipeline = VkRTPipeline::new(
+                app_ref.get_device(),
+                app_ref.get_allocator(),
+                app_ref.get_physical_device().get_raytracing_properties(),
+                &vec![&rt_desc_layout],
+                &vec![],
+                &vec![
+                    String::from("raytracing/raytrace.rgen"),
+                    String::from("raytracing/raytrace.rmiss"),
+                    String::from("raytracing/raytrace.rchit")
+                ],
+                1
+            );
+        }
 
         let rt_globals = Arc::new(VkDataBuffer::new(
             "RT Globals",

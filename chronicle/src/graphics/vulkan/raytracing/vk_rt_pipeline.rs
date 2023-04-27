@@ -2,16 +2,23 @@ use std::ptr;
 
 use crate::graphics::*;
 
+fn align_up(size: u32, alignment: u32) -> u32 {
+    (size + (alignment - 1)) & !(alignment - 1)
+}
+
 pub struct VkRTPipeline {
     device: Arc<VkLogicalDevice>,
     shader_stage_indices: HashMap<vk::ShaderStageFlags, usize>,
     pipeline_layout: vk::PipelineLayout,
-    pipeline: vk::Pipeline
+    pipeline: vk::Pipeline,
+    sbt: Arc<VkBuffer>
 }
 
 impl VkRTPipeline {
     pub fn new(
         device: Arc<VkLogicalDevice>,
+        allocator: ArcMutex<Allocator>,
+        rt_properties: &vk::PhysicalDeviceRayTracingPipelinePropertiesKHR,
         desc_layouts: &Vec<&VkDescriptorSetLayout>,
         push_constants: &Vec<vk::PushConstantRange>,
         shaders: &Vec<String>,
@@ -98,14 +105,101 @@ impl VkRTPipeline {
                 ).expect("Failed to create rt pipeline.")
         };
 
+        let sbt = Arc::new(Self::create_sbt(
+            device.clone(),
+            allocator,
+            pipeline[0],
+            rt_properties,
+            1, 1
+        ));
+
         Arc::new(
             VkRTPipeline {
                 device: device,
                 shader_stage_indices: shader_stage_indices,
                 pipeline_layout: pipeline_layout,
-                pipeline: pipeline[0]
+                pipeline: pipeline[0],
+                sbt: sbt
             }
         )
+    }
+
+    fn create_sbt(
+        device: Arc<VkLogicalDevice>,
+        allocator: ArcMutex<Allocator>,
+        pipeline: vk::Pipeline,
+        rt_properties: &vk::PhysicalDeviceRayTracingPipelinePropertiesKHR,
+        miss_count: u32, hit_count: u32
+    ) -> VkBuffer {
+        let handle_count = 1 + miss_count + hit_count;
+        let handle_size = rt_properties.shader_group_handle_size;
+        let handle_size_aligned = align_up(handle_size, rt_properties.shader_group_base_alignment);
+
+        let mut rgen_region = vk::StridedDeviceAddressRegionKHR::default();
+        let mut miss_region = vk::StridedDeviceAddressRegionKHR::default();
+        let mut hit_region = vk::StridedDeviceAddressRegionKHR::default();
+        let call_region = vk::StridedDeviceAddressRegionKHR::default();
+
+        rgen_region.stride = align_up(handle_size_aligned, rt_properties.shader_group_base_alignment) as u64;
+        rgen_region.size = rgen_region.stride;
+        miss_region.stride = handle_size_aligned as u64;
+        miss_region.size = align_up(miss_count * handle_size_aligned, rt_properties.shader_group_base_alignment) as u64;
+        hit_region.stride = handle_size_aligned as u64;
+        hit_region.size = align_up(hit_count * handle_size_aligned, rt_properties.shader_group_base_alignment) as u64;
+    
+        let data_size = (handle_count * handle_size) as usize;
+        let mut handles = unsafe {
+            device.raytracing_loader()
+                .get_ray_tracing_shader_group_handles(
+                    pipeline,
+                    0, handle_count,
+                    data_size
+                )
+                .expect("Failed to get rt shader group handles.")
+        };
+
+        let sbt_size = rgen_region.size + miss_region.size + hit_region.size + call_region.size;
+        let sbt = VkBuffer::new(
+            "Shader Binding Table".to_owned(),
+            device,
+            allocator,
+            sbt_size,
+            vk::BufferUsageFlags::TRANSFER_SRC | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS | vk::BufferUsageFlags::SHADER_BINDING_TABLE_KHR,
+            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+            None
+        );
+        let sbt_address = sbt.get_device_address();
+
+        rgen_region.device_address = sbt_address;
+        miss_region.device_address = sbt_address + rgen_region.size;
+        hit_region.device_address = sbt_address + rgen_region.size + miss_region.size;
+
+        unsafe {
+            let mut get_handle = |i: isize| -> *mut u8  {
+                let begin = &mut handles[0] as *mut u8;
+                begin.offset(i)
+            };
+            let mut handle_idx = 0;
+
+            let data_ptr = sbt.map() as *mut u8;
+
+            data_ptr.offset(0).copy_from_nonoverlapping(get_handle(handle_idx), handle_size as usize);
+            handle_idx += 1;
+            for i in 0..miss_count {
+                let offset = rgen_region.size + i as u64 * miss_region.stride;
+                data_ptr.offset(offset as isize).copy_from_nonoverlapping(get_handle(handle_idx), handle_size as usize);
+                handle_idx += 1;
+            }
+            for i in 0..hit_count {
+                let offset = rgen_region.size + miss_region.size + i as u64 * hit_region.stride;
+                data_ptr.offset(offset as isize).copy_from_nonoverlapping(get_handle(handle_idx), handle_size as usize);
+                handle_idx += 1;
+            }
+
+            sbt.unmap();
+        }
+
+        sbt
     }
 
     pub fn get_stage_index(&self, stage_flags: &vk::ShaderStageFlags) -> u32 {
