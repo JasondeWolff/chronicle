@@ -11,7 +11,12 @@ pub struct VkRTPipeline {
     shader_stage_indices: HashMap<vk::ShaderStageFlags, usize>,
     pipeline_layout: vk::PipelineLayout,
     pipeline: vk::Pipeline,
-    sbt: Arc<VkBuffer>
+
+    sbt: Arc<VkBuffer>,
+    rgen_region: vk::StridedDeviceAddressRegionKHR,
+    miss_region: vk::StridedDeviceAddressRegionKHR,
+    hit_region: vk::StridedDeviceAddressRegionKHR,
+    call_region: vk::StridedDeviceAddressRegionKHR
 }
 
 impl VkRTPipeline {
@@ -105,13 +110,28 @@ impl VkRTPipeline {
                 ).expect("Failed to create rt pipeline.")
         };
 
-        let sbt = Arc::new(Self::create_sbt(
+        let mut miss_shader_count = 0;
+        let mut hit_shader_count = 0;
+        for (stage_flags, _) in &shader_stage_indices {
+            match *stage_flags {
+                vk::ShaderStageFlags::CLOSEST_HIT_KHR => {
+                    hit_shader_count += 1;
+                }
+                vk::ShaderStageFlags::MISS_KHR => {
+                    miss_shader_count += 1;
+                }
+                _ => {}
+            }
+        }
+
+        let (sbt, regions) = Self::create_sbt(
             device.clone(),
             allocator,
             pipeline[0],
             rt_properties,
-            1, 1
-        ));
+            miss_shader_count,
+            hit_shader_count
+        );
 
         Arc::new(
             VkRTPipeline {
@@ -119,7 +139,11 @@ impl VkRTPipeline {
                 shader_stage_indices: shader_stage_indices,
                 pipeline_layout: pipeline_layout,
                 pipeline: pipeline[0],
-                sbt: sbt
+                sbt: Arc::new(sbt),
+                rgen_region: regions[0],
+                miss_region: regions[1],
+                hit_region: regions[2],
+                call_region: regions[3]
             }
         )
     }
@@ -130,7 +154,7 @@ impl VkRTPipeline {
         pipeline: vk::Pipeline,
         rt_properties: &vk::PhysicalDeviceRayTracingPipelinePropertiesKHR,
         miss_count: u32, hit_count: u32
-    ) -> VkBuffer {
+    ) -> (VkBuffer, [vk::StridedDeviceAddressRegionKHR; 4]) {
         let handle_count = 1 + miss_count + hit_count;
         let handle_size = rt_properties.shader_group_handle_size;
         let handle_size_aligned = align_up(handle_size, rt_properties.shader_group_base_alignment);
@@ -199,7 +223,12 @@ impl VkRTPipeline {
             sbt.unmap();
         }
 
-        sbt
+        (sbt, [
+            rgen_region,
+            miss_region,
+            hit_region,
+            call_region
+        ])
     }
 
     pub fn get_stage_index(&self, stage_flags: &vk::ShaderStageFlags) -> u32 {
@@ -214,12 +243,29 @@ impl VkRTPipeline {
     pub fn get_layout(&self) -> vk::PipelineLayout {
         self.pipeline_layout
     }
+
+    pub fn get_rgen_region(&self) -> &vk::StridedDeviceAddressRegionKHR {
+        &self.rgen_region
+    }
+
+    pub fn get_miss_region(&self) -> &vk::StridedDeviceAddressRegionKHR {
+        &self.miss_region
+    }
+
+    pub fn get_hit_region(&self) -> &vk::StridedDeviceAddressRegionKHR {
+        &self.hit_region
+    }
+
+    pub fn get_call_region(&self) -> &vk::StridedDeviceAddressRegionKHR {
+        &self.call_region
+    }
 }
 
 impl Drop for VkRTPipeline {
     fn drop(&mut self) {
         unsafe {
-            
+            self.device.get_device()
+                .destroy_pipeline_layout(self.pipeline_layout, None);
         }
     }
 }

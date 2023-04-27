@@ -239,9 +239,10 @@ impl Renderer {
                 &vec![
                     String::from("raytracing/raytrace.rgen"),
                     String::from("raytracing/raytrace.rmiss"),
+                    String::from("raytracing/raytrace_shadow.rmiss"),
                     String::from("raytracing/raytrace.rchit")
                 ],
-                1
+                2
             );
         }
 

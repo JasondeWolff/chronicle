@@ -17,7 +17,8 @@ pub struct VkCmdBuffer {
     desc_sets: HashMap<u32, Arc<VkDescriptorSet>>,
     desc_layouts: HashMap<u32, Arc<VkDescriptorSetLayout>>,
 
-    pipeline: Option<Arc<VkGraphicsPipeline>>,
+    graphics_pipeline: Option<Arc<VkGraphicsPipeline>>,
+    rt_pipeline: Option<Arc<VkRTPipeline>>,
 
     tracked_buffers: Vec<Arc<VkBuffer>>,
     tracked_desc_sets: Vec<Arc<VkDescriptorSet>>,
@@ -52,7 +53,8 @@ impl VkCmdBuffer {
             desc_pool: desc_pool,
             desc_sets: HashMap::new(),
             desc_layouts: HashMap::new(),
-            pipeline: None,
+            graphics_pipeline: None,
+            rt_pipeline: None,
             tracked_buffers: Vec::new(),
             tracked_desc_sets: Vec::new()
         }
@@ -64,7 +66,7 @@ impl VkCmdBuffer {
 
     pub fn reset(&mut self) {
         unsafe {
-            self.pipeline = None;
+            self.graphics_pipeline = None;
             self.desc_layouts.clear();
             self.tracked_buffers.clear();
             self.tracked_desc_sets.clear();
@@ -189,13 +191,26 @@ impl VkCmdBuffer {
     }
 
     pub fn bind_graphics_pipeline(&mut self, pipeline: Arc<VkGraphicsPipeline>) {
-        self.pipeline = Some(pipeline.clone());
+        self.graphics_pipeline = Some(pipeline.clone());
 
         unsafe {
             self.device.get_device()
                 .cmd_bind_pipeline(
                     self.cmd_buffer,
                     vk::PipelineBindPoint::GRAPHICS,
+                    pipeline.get_pipeline(),
+                );
+        }
+    }
+
+    pub fn bind_rt_pipeline(&mut self, pipeline: Arc<VkRTPipeline>) {
+        self.rt_pipeline = Some(pipeline.clone());
+
+        unsafe {
+            self.device.get_device()
+                .cmd_bind_pipeline(
+                    self.cmd_buffer,
+                    vk::PipelineBindPoint::RAY_TRACING_KHR,
                     pipeline.get_pipeline(),
                 );
         }
@@ -252,6 +267,25 @@ impl VkCmdBuffer {
                     first_index,
                     vertex_offset as i32,
                     first_instance
+                );
+        }
+    }
+
+    pub fn trace_rays(&self, width: u32, height: u32) {
+        let rt_pipeline = self.rt_pipeline.as_ref()
+            .expect("Failed to trace rays. (No VkRTPipeline bound)");
+
+        unsafe {
+            self.device.raytracing_loader()
+                .cmd_trace_rays(
+                    self.cmd_buffer,
+                    rt_pipeline.get_rgen_region(),
+                    rt_pipeline.get_miss_region(),
+                    rt_pipeline.get_hit_region(),
+                    rt_pipeline.get_call_region(),
+                    width,
+                    height,
+                    1
                 );
         }
     }
@@ -690,7 +724,7 @@ impl VkCmdBuffer {
                 .cmd_bind_descriptor_sets(
                     self.cmd_buffer,
                     vk::PipelineBindPoint::GRAPHICS,
-                    self.pipeline.as_ref().unwrap().get_layout(),
+                    self.graphics_pipeline.as_ref().unwrap().get_layout(),
                     0,
                     &desc_set_ptrs,
                     &[]
@@ -704,7 +738,7 @@ impl VkCmdBuffer {
     }
 
     pub fn push_constant<T: Sized>(&self, constant: &T, stage_flags: vk::ShaderStageFlags) {
-        let pipeline = self.pipeline.as_ref()
+        let pipeline = self.graphics_pipeline.as_ref()
                                         .expect("Failed to push constant. (No pipeline bound)").as_ref();
 
         unsafe {
